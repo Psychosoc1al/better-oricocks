@@ -26,13 +26,6 @@
                 GM.setValue(name, gradeSpan.innerText);
                 break;
             }
-        // for (let i = 0; i < disciplineRows.length; i++) {
-        //     if (disciplineRows[i].className === 'pointer ng-scope info') {
-        //         let name = disciplineRows[i].querySelector('td.ng-binding').innerText;
-        //         name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-        //         GM.setValue(name, gradeSpan.innerText);
-        //     }
-        // }
     }
 
 
@@ -93,9 +86,28 @@
         }
     }
 
+    function getGradeRatio(disciplineRow) {
+        let currentGrade = disciplineRow.querySelector('td span.grade').innerText;
+        let maxGrade = disciplineRow.querySelector('td.mvb div').innerText.split(' ')[1];
 
-    function correctGradeName() {
+        return parseFloat(currentGrade) / parseFloat(maxGrade);
+    }
 
+    function correctGradeName(disciplineRow) {
+        const gradeCell = document.querySelector('td.text-right span.grade');
+        const gradeRatio = getGradeRatio(disciplineRow);
+        const isOffset = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
+
+        if (gradeRatio < 0.5) {
+            gradeCell.lastChild.nodeValue = 'Незачтено';
+            gradeCell.attributes.style.nodeValue = 'width: 75px';
+        } else if (isOffset){
+            gradeCell.lastChild.nodeValue = 'Зачтено';
+            gradeCell.attributes.style.nodeValue = 'width: 60px';
+        } else if (gradeRatio < 0.7) {
+            gradeCell.lastChild.nodeValue = 'Удовлетворительно';
+            gradeCell.attributes.style.nodeValue = 'width: 135px';
+        } else gradeCell.attributes.style.nodeValue = 'width: 65px';
     }
 
 
@@ -129,6 +141,9 @@
         const targetNode = document.querySelectorAll('table.table-hover')[0];
         const config = {subtree: true, attributeFilter: ['class']};
         const callback = function (mutationsList, observer) {
+            const disciplineSelected = mutationsList[mutationsList[0].target.outerHTML.includes(' info') ? 0 : 1];
+            if (disciplineSelected)
+                correctGradeName(disciplineSelected.target);
             updateDisciplineGrade();
         };
         const observer = new MutationObserver(callback);
