@@ -27,13 +27,14 @@
         const targetNode = document.querySelectorAll('table.table-hover')[0];
         const config = {subtree: true, attributeFilter: ['class']};
 
+
         function disciplineGradeSave(gradeSpan) {
             const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
             for (const row of disciplineRows)
                 if (row.className === 'pointer ng-scope info') {
                     let name = row.querySelector('td.ng-binding').innerText;
                     name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                    GM.setValue(name, gradeSpan.innerText);
+                    GM.setValue(name, gradeSpan.innerText + ':' + countNewGradeClass(row));
                     break;
                 }
         }
@@ -48,8 +49,10 @@
                 let currentGrade = row.querySelector('td span.grade').innerText;
 
                 GM.getValue(disciplineName).then((value) => {
-                    if (parseFloat(currentGrade) < parseFloat(value))
-                        row.querySelector('td span.grade').innerText = value;
+                    if (parseFloat(currentGrade) <= parseFloat(value.split(':')[0])) {
+                        row.querySelector('td span.grade').innerText = value.split(':')[0];
+                        adjustGradeColor(row, parseInt(value.split(':')[1]))
+                    }
                 })
             }
         }
@@ -89,19 +92,16 @@
 
             for (const row of disciplineRows) {
                 const gradeSpan = row.querySelector('td span.grade');
-                if (gradeSpan) {
-                    gradeSpan.innerText = adjustNumber(sum);
-                    observer.disconnect();
-                    adjustGradeColor(row);
-                    observer.observe(targetNode, config);
-                    disciplineGradeSave(gradeSpan);
-                }
+                gradeSpan.innerText = adjustNumber(sum);
+                observer.disconnect();
+                adjustGradeColor(row);
+                observer.observe(targetNode, config);
+                disciplineGradeSave(gradeSpan);
             }
         }
 
-        function adjustGradeColor(disciplineRow) {
+        function countNewGradeClass(disciplineRow) {
             const gradeRatio = getGradeRatio(disciplineRow);
-            let gradeClass = disciplineRow.querySelector('td span.grade').attributes.class
             let newClass;
 
             if (gradeRatio < 0.2)
@@ -115,7 +115,17 @@
             else
                 newClass = 5
 
+            return newClass;
+        }
+
+        function adjustGradeColor(disciplineRow, newClass = 0) {
+            const gradeClass = disciplineRow.querySelector('td span.grade').attributes.class;
+            const namedGradeClass = document.querySelector('td.text-right span.grade').attributes.class;
+            if (!newClass)
+                newClass = countNewGradeClass(disciplineRow);
+
             gradeClass.nodeValue = gradeClass.nodeValue.replace(/\d/, newClass.toString());
+            namedGradeClass.nodeValue = namedGradeClass.nodeValue.replace(/\d/, newClass.toString());
         }
 
         function getGradeRatio(disciplineRow) {
@@ -139,7 +149,8 @@
             } else if (gradeRatio < 0.7) {
                 gradeCell.lastChild.nodeValue = 'Удовлетворительно';
                 gradeCell.attributes.style.nodeValue = 'width: 135px';
-            } else gradeCell.attributes.style.nodeValue = 'width: 65px';
+            } else
+                gradeCell.attributes.style.nodeValue = 'width: 65px';
         }
 
 
@@ -184,3 +195,7 @@
 ();
 
 //TODO: сделать для названия дисциплины и для количества баллов рамки поменьше, чтобы название влезало нормально
+
+//TODO: подкраска и текстового названия оценки
+
+//TODO: сохранение и загрузка новой подкраски
