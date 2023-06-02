@@ -154,15 +154,23 @@
         }
 
 
-        function changeGradeFieldWidth() {
+        function changeGradeFieldsSizes() {
             for (const sheet of document.styleSheets)
                 if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css')) {
                     for (let i = 0; i < sheet.cssRules.length; i++) {
-                        if (['.grade', '#bp'].includes(sheet.cssRules[i].selectorText)) {
+                        if (['.w46', '.grade', '#bp'].includes(sheet.cssRules[i].selectorText)) {
                             let rule = {};
                             for (const prop in sheet.cssRules[i])
                                 rule[prop] = sheet.cssRules[i][prop];
-                            rule.cssText = rule.cssText.replace('40px', '45px');
+                            switch (sheet.cssRules[i].selectorText) {
+                                case '.w46':
+                                    rule.cssText = rule.cssText.replace('46px', '31px');
+                                    break;
+                                default:
+                                    rule.cssText = rule.cssText.replace('40px', '45px');
+                                    rule.cssText = rule.cssText.replace('padding: 2px', 'padding: 3px');
+                                    break;
+                            }
                             sheet.deleteRule(i)
                             sheet.insertRule(rule.cssText);
                         }
@@ -181,7 +189,7 @@
 
 
         function onPageOpen() {
-            changeGradeFieldWidth()
+            changeGradeFieldsSizes()
             disciplineGradeLoad()
         }
 
@@ -192,10 +200,5 @@
     }
 
 )
-();
 
-//TODO: сделать для названия дисциплины и для количества баллов рамки поменьше, чтобы название влезало нормально
-
-//TODO: подкраска и текстового названия оценки
-
-//TODO: сохранение и загрузка новой подкраски
+//TODO: добавить пересчёт баллов в проценты и обычные баллы (отслеживание переключателя)
