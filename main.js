@@ -4,12 +4,10 @@
 // @version      0.1
 // @description  try to take over the world!
 // @author       You
-// @match        https://orioks.miet.ru/student/student
+// @match        https://orioks.miet.ru/student/student*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=miet.ru
-// @grant        GM_cookie
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @grant        GM_listValues
 // @grant        GM_deleteValue
 // ==/UserScript==
 
@@ -45,11 +43,12 @@
             const selectedTerm = document.querySelector('option[selected="selected"]').innerText;
 
             for (const row of disciplineRows) {
-                let disciplineName = row.querySelector('td.ng-binding').innerText + ', ' + selectedTerm;
-                let currentGrade = row.querySelector('td span.grade').innerText;
+                const disciplineName = row.querySelector('td.ng-binding').innerText + ', ' + selectedTerm;
+                const currentGrade = row.querySelector('td span.grade').innerText;
+                const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
 
                 GM.getValue(disciplineName).then((value) => {
-                    if (parseFloat(currentGrade) <= parseFloat(value.split(':')[0])) {
+                    if (!isDisciplineNew && parseFloat(currentGrade) <= parseFloat(value.split(':')[0])) {
                         row.querySelector('td span.grade').innerText = value.split(':')[0];
                         adjustGradeColor(row, parseInt(value.split(':')[1]))
                     }
@@ -87,16 +86,19 @@
 
 
         function updateDisciplineGrade() {
-            const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope.info');
-            const sum = sumGrades();
+            const isDisciplineNew = document.querySelector('div.w46').innerText === '-';
+            if (!isDisciplineNew) {
+                const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope.info');
+                const sum = sumGrades();
 
-            for (const row of disciplineRows) {
-                const gradeSpan = row.querySelector('td span.grade');
-                gradeSpan.innerText = adjustNumber(sum);
-                observer.disconnect();
-                adjustGradeColor(row);
-                observer.observe(targetNode, config);
-                disciplineGradeSave(gradeSpan);
+                for (const row of disciplineRows) {
+                    const gradeSpan = row.querySelector('td span.grade');
+                    gradeSpan.innerText = adjustNumber(sum);
+                    observer.disconnect();
+                    adjustGradeColor(row);
+                    observer.observe(targetNode, config);
+                    disciplineGradeSave(gradeSpan);
+                }
             }
         }
 
@@ -200,5 +202,6 @@
     }
 
 )
+();
 
 //TODO: добавить пересчёт баллов в проценты и обычные баллы (отслеживание переключателя)
