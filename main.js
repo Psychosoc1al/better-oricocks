@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Нормальный подсчёт баллов
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  try to take over the world!
-// @author       You
-// @match        https://orioks.miet.ru/student/student*
+// @version      1.0
+// @description  Изменение подсчёта баллов и местами дизайна
+// @author       Antonchik
+// @match        https://orioks.miet.ru/student*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=miet.ru
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -157,28 +157,25 @@
 
 
         function changeGradeFieldsSizes() {
-            for (const sheet of document.styleSheets)
+            for (const sheet of document.styleSheets) {
                 if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css')) {
                     for (let i = 0; i < sheet.cssRules.length; i++) {
-                        if (['.w46', '.grade', '#bp'].includes(sheet.cssRules[i].selectorText)) {
-                            let rule = {};
-                            for (const prop in sheet.cssRules[i])
-                                rule[prop] = sheet.cssRules[i][prop];
-                            switch (sheet.cssRules[i].selectorText) {
-                                case '.w46':
-                                    rule.cssText = rule.cssText.replace('46px', '31px');
-                                    break;
-                                default:
-                                    rule.cssText = rule.cssText.replace('40px', '45px');
-                                    rule.cssText = rule.cssText.replace('padding: 2px', 'padding: 3px');
-                                    break;
-                            }
-                            sheet.deleteRule(i)
-                            sheet.insertRule(rule.cssText);
+                        if (sheet.cssRules[i].selectorText === '.w46')
+                            sheet.cssRules[i].style.width = '31px';
+                        if (['.grade', '#bp'].includes(sheet.cssRules[i].selectorText)) {
+                            sheet.cssRules[i].style.width = '45px';
+                            sheet.cssRules[i].style.padding = '3px';
                         }
                     }
+                }
+                if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css?v=1689776524')) {
+                    for (let i = 0; i < sheet.cssRules.length; i++)
+                        if (sheet.cssRules[i].cssText.includes('1170px'))
+                            sheet.cssRules[i].cssRules[0].style.width = '1330px'
                     return;
                 }
+            }
+
         }
 
 
@@ -204,4 +201,4 @@
 )
 ();
 
-//TODO: добавить пересчёт баллов в проценты и обычные баллы (отслеживание переключателя)
+//TODO: пересчитывать цвета оценок при заходе; возможно, перестать сохранять цвета в принципе?
