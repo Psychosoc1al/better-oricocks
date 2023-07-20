@@ -32,7 +32,7 @@
                 if (row.className === 'pointer ng-scope info') {
                     let name = row.querySelector('td.ng-binding').innerText;
                     name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                    GM.setValue(name, gradeSpan.innerText + ':' + countNewGradeClass(row));
+                    GM.setValue(name, gradeSpan.innerText);
                     break;
                 }
         }
@@ -48,11 +48,10 @@
                 const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
 
                 GM.getValue(disciplineName).then((value) => {
-                    if (!isDisciplineNew && parseFloat(currentGrade) <= parseFloat(value.split(':')[0])) {
-                        row.querySelector('td span.grade').innerText = value.split(':')[0];
-                        adjustGradeColor(row, parseInt(value.split(':')[1]))
-                    }
+                    if (!isDisciplineNew && currentGrade <= value)
+                        row.querySelector('td span.grade').innerText = value;
                 })
+                adjustGradeColor(row)
             }
         }
 
@@ -117,17 +116,16 @@
             else
                 newClass = 5
 
-            return newClass;
+            return newClass.toString();
         }
 
-        function adjustGradeColor(disciplineRow, newClass = 0) {
+        function adjustGradeColor(disciplineRow) {
             const gradeClass = disciplineRow.querySelector('td span.grade').attributes.class;
             const namedGradeClass = document.querySelector('td.text-right span.grade').attributes.class;
-            if (!newClass)
-                newClass = countNewGradeClass(disciplineRow);
+            const newClass = countNewGradeClass(disciplineRow);
 
-            gradeClass.nodeValue = gradeClass.nodeValue.replace(/\d/, newClass.toString());
-            namedGradeClass.nodeValue = namedGradeClass.nodeValue.replace(/\d/, newClass.toString());
+            gradeClass.value = gradeClass.value.replace(/\d/, newClass);
+            namedGradeClass.value = namedGradeClass.value.replace(/\d/, newClass);
         }
 
         function getGradeRatio(disciplineRow) {
@@ -143,16 +141,16 @@
             const isOffset = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
 
             if (gradeRatio < 0.5) {
-                gradeCell.lastChild.nodeValue = 'Незачтено';
-                gradeCell.attributes.style.nodeValue = 'width: 75px';
+                gradeCell.innerText = 'Незачтено';
+                gradeCell.style = 'width: 75px';
             } else if (isOffset) {
-                gradeCell.lastChild.nodeValue = 'Зачтено';
-                gradeCell.attributes.style.nodeValue = 'width: 60px';
+                gradeCell.innerText = 'Зачтено';
+                gradeCell.style = 'width: 60px';
             } else if (gradeRatio < 0.7) {
-                gradeCell.lastChild.nodeValue = 'Удовлетворительно';
-                gradeCell.attributes.style.nodeValue = 'width: 135px';
+                gradeCell.innerText = 'Удовлетворительно';
+                gradeCell.style = 'width: 135px';
             } else
-                gradeCell.attributes.style.nodeValue = 'width: 65px';
+                gradeCell.style = 'width: 65px';
         }
 
 
