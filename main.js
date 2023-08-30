@@ -244,7 +244,13 @@
                 saveKeyValue('schedule', schedule);
             }
 
-            setTimeout(async () => await saveSchedule(), 1);
+            async function onMietPageOpen() {
+                await saveSchedule();
+                if (document.URL.endsWith('?better-oricocks'))
+                    window.close();
+            }
+
+            (async () => await onMietPageOpen())();
         }
     }
 
