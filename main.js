@@ -26,6 +26,20 @@
                 }
         }
 
+        /**
+         * Save a key-value pair in the storage.
+         *
+         * @param {string} key - the key to save
+         * @param {string} value - the value to save
+         */
+        function saveKeyValue(key, value) {
+            GM.setValue(key, value);
+        }
+
+        function loadValueByKey(key) {
+            return GM.getValue(key).then(value => value);
+        }
+
 
         if (document.URL.includes('student/student')) {
             const observer = new MutationObserver(
@@ -46,7 +60,7 @@
                     if (row.className === 'pointer ng-scope info') {
                         let name = row.querySelector('td.ng-binding').innerText;
                         name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                        GM.setValue(name, gradeSpan.innerText);
+                        saveKeyValue(name, gradeSpan.innerText);
                         break;
                     }
             }
@@ -54,7 +68,7 @@
 
             function saveGroup() {
                 const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
-                GM.setValue('group', group);
+                saveKeyValue('group', group);
             }
 
 
@@ -67,10 +81,9 @@
                     const currentGrade = row.querySelector('td span.grade').innerText;
                     const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
 
-                    GM.getValue(disciplineName).then((value) => {
-                        if (!isDisciplineNew && currentGrade <= value)
-                            row.querySelector('td span.grade').innerText = value;
-                    })
+                    const value = loadValueByKey(disciplineName);
+                    if (!isDisciplineNew && currentGrade <= value)
+                        row.querySelector('td span.grade').innerText = value;
                     adjustGradeColor(row)
                 }
             }
@@ -210,7 +223,28 @@
         } else if (document.URL.includes('orioks.miet.ru'))
             changeBodyWidth();
         else {
+            async function parseSchedule() {
+                const group = loadValueByKey('group');
+                const requestData = {
+                    method: 'POST',
+                    body: `group=${group}`,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    }
+                };
 
+                return fetch('https://miet.ru/schedule/data', requestData)
+                    .then(response => response.text())
+                    .then(text => JSON.parse(text))
+                    .catch(error => console.error(error));
+            }
+
+            async function saveSchedule() {
+                const schedule = await parseSchedule();
+                saveKeyValue('schedule', schedule);
+            }
+
+            setTimeout(async () => await saveSchedule(), 1);
         }
     }
 
