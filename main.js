@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.21
+// @version      1.22
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
+// @match        https://miet.ru/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=miet.ru
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -13,6 +14,7 @@
 
 (function () {
         'use strict';
+
 
         function changeBodyWidth() {
             for (const sheet of document.styleSheets)
@@ -38,7 +40,7 @@
             const config = {subtree: true, attributeFilter: ['class']};
 
 
-            function disciplineGradeSave(gradeSpan) {
+            function saveDisciplineGrade(gradeSpan) {
                 const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
                 for (const row of disciplineRows)
                     if (row.className === 'pointer ng-scope info') {
@@ -50,7 +52,13 @@
             }
 
 
-            function disciplineGradeLoad() {
+            function saveGroup() {
+                const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
+                GM.setValue('group', group);
+            }
+
+
+            function loadDisciplineGrade() {
                 const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
                 const selectedTerm = document.querySelector('option[selected="selected"]').innerText;
 
@@ -108,7 +116,7 @@
                         observer.disconnect();
                         adjustGradeColor(row);
                         observer.observe(targetNode, config);
-                        disciplineGradeSave(gradeSpan);
+                        saveDisciplineGrade(gradeSpan);
                     }
                 }
             }
@@ -191,15 +199,19 @@
             function onPageOpen() {
                 changeGradeFieldsSizes();
                 changeBodyWidth();
-                disciplineGradeLoad();
+                loadDisciplineGrade();
+                saveGroup();
             }
 
 
             setTimeout(setToSum, 1);
             setTimeout(onPageOpen, 10);
             setTimeout(() => observer.observe(targetNode, config), 50);
-        } else
+        } else if (document.URL.includes('orioks.miet.ru'))
             changeBodyWidth();
+        else {
+
+        }
     }
 
 )
