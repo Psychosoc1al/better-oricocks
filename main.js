@@ -13,13 +13,13 @@
 // ==/UserScript==
 
 (function () { //NOSONAR
-        try {
-            'use strict'; //NOSONAR
+        'use strict'; //NOSONAR
 
+        try {
             /**
-             * Changes the body width based on the specified condition.
+             * Changes the body width to make the interface wider.
              */
-            function changeBodyWidth() {
+            const changeBodyWidth = function () {
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
@@ -33,15 +33,21 @@
              * Save a key-value pair in the storage.
              *
              * @param {string} key - the key to save
-             * @param {string} value - the value to save
+             * @param {string | Object} value - the value to save
              */
-            function saveKeyValue(key, value) {
+            const saveKeyValue = function (key, value) {
                 // noinspection JSUnresolvedReference
                 GM.setValue(key, value);
             }
 
-            function loadValueByKey(key) {
-                // noinspection JSUnresolvedReference
+            /**
+             * Retrieves the value associated with the given key.
+             *
+             * @param {string} key - The key to retrieve the value for.
+             * @return {Promise<string>} - The value associated with the given key.
+             */
+            const loadValueByKey = function (key) {
+                // noinspection JSUnresolvedReference,JSCheckFunctionSignatures
                 return GM.getValue(key);
             }
 
@@ -59,25 +65,36 @@
                 const config = {subtree: true, attributeFilter: ['class']};
 
 
-                function saveDisciplineGrade(gradeSpan) {
+                /**
+                 * Save the discipline grade.
+                 *
+                 * @param {Element} gradeSpan - the grade span element
+                 */
+                const saveDisciplineGrade = function (gradeSpan) {
                     const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
                     for (const row of disciplineRows)
                         if (row.className === 'pointer ng-scope info') {
                             let name = row.querySelector('td.ng-binding').innerText;
                             name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                            saveKeyValue(name, gradeSpan.innerText);
+                            saveKeyValue(name, gradeSpan['innerText']);
                             break;
                         }
                 }
 
 
-                function saveGroup() {
+                /**
+                 * Saves the group value by extracting it from the selected option of a dropdown list.
+                 */
+                const saveGroup = function () {
                     const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
                     saveKeyValue('group', group);
                 }
 
 
-                function loadDisciplineGrade() {
+                /**
+                 * Load discipline grades from the DOM and update the current grade if it is lower than the stored value.
+                 */
+                const loadDisciplineGrade = function () {
                     const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
                     const selectedTerm = document.querySelector('option[selected="selected"]').innerText;
 
@@ -95,7 +112,12 @@
                 }
 
 
-                function sumGrades() {
+                /**
+                 * Calculates the sum of all the grades in the grades list.
+                 *
+                 * @return {number} The sum of all the grades.
+                 */
+                const sumGrades = function () {
                     const gradesList = document.querySelectorAll('span.grade');
                     let sum = 0;
 
@@ -112,18 +134,29 @@
                 }
 
 
-                function adjustNumber(number) {
-                    number = number.toFixed(2)
-                    while (number.slice(-1) === '0')
-                        number = number.slice(0, -1)
-                    if (number.slice(-1) === '.')
-                        number = number.slice(0, -1)
+                /**
+                 * Adjusts a number by removing trailing zeros and the decimal point if necessary.
+                 *
+                 * @param {number} number - The number to be adjusted.
+                 * @return {string} The adjusted number as a string.
+                 */
+                const adjustNumber = function (number) {
+                    let stringedNumber = number.toFixed(2);
 
-                    return number
+                    while (stringedNumber.endsWith('0'))
+                        stringedNumber = stringedNumber.slice(0, -1);
+
+                    if (stringedNumber.endsWith('.'))
+                        stringedNumber = stringedNumber.slice(0, -1);
+
+                    return stringedNumber
                 }
 
 
-                function updateDisciplineGrade() {
+                /**
+                 * Updates the discipline grade.
+                 */
+                const updateDisciplineGrade = function () {
                     const isDisciplineNew = document.querySelector('div.w46').innerText === '-';
                     if (!isDisciplineNew) {
                         const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope.info');
@@ -140,7 +173,14 @@
                     }
                 }
 
-                function countNewGradeClass(disciplineRow) {
+
+                /**
+                 * Calculates the new grade class based on the grade ratio.
+                 *
+                 * @param {Element} disciplineRow - The discipline row object.
+                 * @return {string} The new grade class as a string.
+                 */
+                const countNewGradeClass = function (disciplineRow) {
                     const gradeRatio = getGradeRatio(disciplineRow);
                     let newClass;
 
@@ -158,7 +198,13 @@
                     return newClass.toString();
                 }
 
-                function adjustGradeColor(disciplineRow) {
+
+                /**
+                 * Adjusts the color of the grade in a discipline row based on the grade ratio.
+                 *
+                 * @param {Element} disciplineRow - The discipline row element in the DOM.
+                 */
+                const adjustGradeColor = function (disciplineRow) {
                     const gradeClass = disciplineRow.querySelector('td span.grade').attributes['class'];
                     const namedGradeClass = document.querySelector('td.text-right span.grade').attributes['class'];
                     const newClass = countNewGradeClass(disciplineRow);
@@ -167,14 +213,20 @@
                     namedGradeClass.value = namedGradeClass.value.replace(/\d/, newClass);
                 }
 
-                function getGradeRatio(disciplineRow) {
+                const getGradeRatio = function (disciplineRow) {
                     let currentGrade = disciplineRow.querySelector('td span.grade').innerText;
                     let maxGrade = disciplineRow.querySelector('td.mvb div').innerText.split(' ')[1];
 
                     return parseFloat(currentGrade) / parseFloat(maxGrade);
                 }
 
-                function correctGradeName(disciplineRow) {
+
+                /**
+                 * Change written grade field sizes based on the grade ratio.
+                 *
+                 * @param {Element} disciplineRow - the discipline row object
+                 */
+                const correctGradeName = function (disciplineRow) {
                     const gradeCell = document.querySelector('td.text-right span.grade');
                     const gradeRatio = getGradeRatio(disciplineRow);
                     const isOffset = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
@@ -193,7 +245,10 @@
                 }
 
 
-                function changeGradeFieldsSizes() {
+                /**
+                 * Changes the size of grade fields.
+                 */
+                const changeGradeFieldsSizes = function () {
                     for (const sheet of document.styleSheets)
                         if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css'))
                             for (const element of sheet.cssRules) {
@@ -207,15 +262,10 @@
                 }
 
 
-                function setToSum() {
-                    const clickEvent = new MouseEvent('click');
-                    const elem = document.getElementById('bp');
-                    elem.dispatchEvent(clickEvent);
-                    elem.dispatchEvent(clickEvent);
-                }
-
-
-                function onPageOpen() {
+                /**
+                 * Executes the necessary actions when the page is opened.
+                 */
+                const onPageOpen = function () {
                     changeGradeFieldsSizes();
                     changeBodyWidth();
                     loadDisciplineGrade();
@@ -223,13 +273,17 @@
                 }
 
 
-                setTimeout(setToSum, 1);
                 setTimeout(onPageOpen, 10);
                 setTimeout(() => observer.observe(targetNode, config), 50);
             } else if (document.URL.includes('orioks.miet.ru'))
                 changeBodyWidth();
             else {
-                async function parseSchedule() {
+                /**
+                 * Parses the schedule by sending a POST request to the server with the group as the body.
+                 *
+                 * @return {Promise<Object>} A promise that resolves with the parsed schedule object or rejects with an error.
+                 */
+                const parseSchedule = async function () {
                     const group = await loadValueByKey('group');
                     const requestData = {
                         method: 'POST',
@@ -246,23 +300,31 @@
                 }
 
 
-                function saveSchedule() {
+                /**
+                 * Saves the schedule by parsing it and then saving the key-value pair.
+                 */
+                const saveSchedule = function () {
                     parseSchedule().then(schedule => saveKeyValue('schedule', schedule));
                 }
 
 
-                function onMietPageOpen() {
+                /**
+                 * Executes the necessary actions when the page is opened.
+                 */
+                const onPageOpen = function () {
                     saveSchedule();
                     if (document.URL.endsWith('?better-oricocks'))
                         window.close();
-                }
+                };
 
 
-                (() => onMietPageOpen())();
+                (() => onPageOpen())();
             }
         } catch (e) {
             alert(e);
         }
+
     }
 )
 ();
+
