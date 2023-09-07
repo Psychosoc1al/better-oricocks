@@ -30,6 +30,7 @@
                 }
         }
 
+
         /**
          * Save a key-value pair in the storage.
          *
@@ -40,6 +41,7 @@
             // noinspection JSUnresolvedReference
             GM.setValue(key, value);
         }
+
 
         /**
          * Retrieves the value associated with the given key.
@@ -53,7 +55,6 @@
         }
 
 
-        // noinspection JSUnusedGlobalSymbols
         if (document.URL.includes('student/student')) {
             const observer = new MutationObserver(
                 (mutationsList) => {
@@ -73,14 +74,11 @@
              * @param {Element} gradeSpan - the grade span element
              */
             const saveDisciplineGrade = function (gradeSpan) {
-                const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
-                for (const row of disciplineRows)
-                    if (row.className === 'pointer ng-scope info') {
-                        let name = row.querySelector('td.ng-binding').innerText;
-                        name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                        saveKeyValue(name, gradeSpan['innerText']);
-                        break;
-                    }
+                const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
+                let name = disciplineRow.querySelector('td.ng-binding').innerText;
+
+                name += ', ' + document.querySelector('option[selected="selected"]').innerText;
+                saveKeyValue(name, gradeSpan['innerText']);
             }
 
 
@@ -185,7 +183,10 @@
                 let sum = 0;
 
                 for (const grade of gradesList) {
-                    const isInsideRestricted = (grade.closest('div[ng-class]') || grade.closest('tr[ng-class="class_l()"]')) !== null;
+                    const isInsideRestricted = (
+                        grade.closest('div[ng-class]') || grade.closest('tr[ng-class="class_l()"]')
+                    ) !== null;
+
                     if (!isInsideRestricted) {
                         const gradeValue = parseFloat(grade.innerText);
                         if (!isNaN(gradeValue))
@@ -220,19 +221,18 @@
              * Updates the discipline grade.
              */
             const updateDisciplineGrade = function () {
-                const isDisciplineNew = document.querySelector('div.w46').innerText === '-';
+                const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
+                const isDisciplineNew = disciplineRow.querySelector('div.w46').innerText === '-';
+
                 if (!isDisciplineNew) {
-                    const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope.info');
+                    const gradeSpan = disciplineRow.querySelector('td span.grade');
                     const sum = sumGrades();
 
-                    for (const row of disciplineRows) {
-                        const gradeSpan = row.querySelector('td span.grade');
-                        gradeSpan.innerText = adjustNumber(sum);
-                        observer.disconnect();
-                        adjustGradeColor(row);
-                        observer.observe(targetNode, config);
-                        saveDisciplineGrade(gradeSpan);
-                    }
+                    gradeSpan.innerText = adjustNumber(sum);
+                    observer.disconnect();
+                    adjustGradeColor(disciplineRow);
+                    observer.observe(targetNode, config);
+                    saveDisciplineGrade(gradeSpan);
                 }
             };
 
