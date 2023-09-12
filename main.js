@@ -6,6 +6,7 @@
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=miet.ru
+// @downloadURL  https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js?token=GHSAT0AAAAAACG6HQA46RVVF6H2ZHTRY4UQZIAP3OA
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
