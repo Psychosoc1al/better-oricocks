@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.28.1
+// @version      1.29
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -68,6 +68,14 @@
             )
             const targetNode = document.querySelectorAll('table.table-hover')[0];
             const config = {subtree: true, attributeFilter: ['class']};
+            const weeksNumbers = {
+                '1 числитель': 0,
+                '1 знаменатель': 1,
+                '2 числитель': 2,
+                '2 знаменатель': 3
+            };
+            const currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+            const currentDayNumber = new Date().getDay();
 
 
             /**
@@ -149,11 +157,11 @@
 
 
             /**
-             * Parses the schedule by sending a request to 'https://miet.ru/schedule/data'.
+             * Gets the schedule by sending a request to 'https://miet.ru/schedule/data'.
              *
              * @return {Promise<Object>} A promise that resolves with the response text.
              */
-            const parseSchedule = function () {
+            const getSchedule = function () {
                 return sendRequest('https://miet.ru/schedule/data', 'POST')
                     .then(responseObject => {
                         const cookie = responseObject.responseText.match(/wl=.*;path=\//);
@@ -165,11 +173,39 @@
                     });
             };
 
+            /**
+             * Parses the schedule data received from the server.
+             *
+             * @return {Promise<Array<Object>>} An array of parsed schedule elements.
+             */
+            const parseSchedule = function () {
+                return getSchedule().then(responseJSON => {
+                    console.log(responseJSON['Data'][0]);
+                    const parsedSchedule = [];
+
+                    for (const responseJSONElement of responseJSON['Data']) {
+                        const scheduleElement = {}
+
+                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
+                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
+                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
+                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
+                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
+                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
+                        scheduleElement['startTime'] = responseJSONElement['Time']['TimeFrom'];
+                        scheduleElement['endTime'] = responseJSONElement['Time']['TimeTo'];
+
+                        parsedSchedule.push(scheduleElement);
+                    }
+                    return parsedSchedule;
+                })
+            }
+
 
             const saveSchedule = function () {
-                parseSchedule().then(responseJSON => {
-                    console.log(responseJSON);
-                    saveKeyValue('schedule', responseJSON);
+                parseSchedule().then(parsedSchedule => {
+                    console.log(parsedSchedule);
+                    saveKeyValue('schedule', parsedSchedule);
                 })
             };
 
