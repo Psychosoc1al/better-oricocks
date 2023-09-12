@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.26
+// @version      1.28
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -94,8 +94,8 @@
             /**
              * Load discipline grades from the DOM and update the current grade if it is lower than the stored value.
              */
-            const loadDisciplineGrade = function () {
-                const disciplineRows = document.querySelectorAll('div[ng-class="class_h()"] tr.pointer.ng-scope');
+            const loadDisciplinesGrades = function () {
+                const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope');
                 const selectedTerm = document.querySelector('option[selected="selected"]').innerText;
 
                 for (const row of disciplineRows) {
@@ -106,8 +106,7 @@
                     loadValueByKey(disciplineName).then(value => {
                         if (!isDisciplineNew && currentGrade <= value)
                             row.querySelector('td span.grade').innerText = value;
-                    });
-                    adjustGradeColor(row)
+                    }).then(() => adjustGradeColor(row));
                 }
             }
 
@@ -338,7 +337,7 @@
             const onPageOpen = function () {
                 changeGradeFieldsSizes();
                 changeBodyWidth();
-                loadDisciplineGrade();
+                loadDisciplinesGrades();
                 saveGroup();
             };
 
