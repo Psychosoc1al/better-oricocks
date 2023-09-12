@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.28
+// @version      1.28.1
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
