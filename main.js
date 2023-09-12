@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.29
+// @version      1.29.2
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -368,6 +368,49 @@
                         }
             };
 
+            const setScheduleCSS = function () {
+                for (const sheet of document.styleSheets)
+                    if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
+                        for (const element of sheet.cssRules)
+                            if (element.cssText.startsWith('.alert {') && element.style['padding']) {
+                                element.style['padding'] = 0;
+                                element.style['margin-bottom'] = 0;
+                            }
+                        break;
+                    }
+
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    div.alert.ng-scope table,
+                    div.alert.ng-scope table tr,
+                    div.alert.ng-scope table th,
+                    div.alert.ng-scope table td {
+                      border: 1px solid black;
+                      border-collapse: collapse;
+                      width: 100%;
+                    }`;
+
+                document.querySelector('.alert.ng-scope').innerHTML = `
+                    <table>
+                      <tr>
+                        <th>Company</th>
+                        <th>Contact</th>
+                        <th>Country</th>
+                      </tr>
+                      <tr>
+                        <td>Alfreds Futterkiste</td>
+                        <td>Maria Anders</td>
+                        <td>Germany</td>
+                      </tr>
+                      <tr>
+                        <td>Centro comercial Moctezuma</td>
+                        <td>Francisco Chang</td>
+                        <td>Mexico</td>
+                      </tr>
+                    </table>`;
+                document.querySelector('.alert.ng-scope').appendChild(style);
+            }
+
 
             /**
              * Executes the necessary actions when the page is opened.
@@ -375,6 +418,7 @@
             const onPageOpen = function () {
                 changeGradeFieldsSizes();
                 changeBodyWidth();
+                setScheduleCSS();
                 loadDisciplinesGrades();
                 saveGroup();
             };
