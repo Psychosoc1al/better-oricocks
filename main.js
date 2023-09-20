@@ -113,10 +113,12 @@
                     const currentGrade = row.querySelector('td span.grade').innerText;
                     const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
 
-                    loadValueByKey(disciplineName).then(value => {
-                        if (!isDisciplineNew && currentGrade <= value)
-                            row.querySelector('td span.grade').innerText = value;
-                    }).then(() => adjustGradeColor(row));
+                    loadValueByKey(disciplineName)
+                        .then(value => {
+                            if (!isDisciplineNew && parseFloat(currentGrade) <= parseFloat(value))
+                                row.querySelector('td span.grade').innerText = value;
+                        })
+                        .then(() => adjustGradeColor(row));
                 }
             }
 
