@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.29.2
+// @version      1.29.4
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -338,20 +338,25 @@
             const correctGradeName = function (disciplineRow) {
                 const gradeCell = document.querySelector('td.text-right span.grade');
                 const gradeRatio = getGradeRatio(disciplineRow);
-                const isOffset = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
+                const isCredit = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
 
                 if (gradeRatio < 0.5) {
                     gradeCell.innerText = 'Незачтено';
                     gradeCell.style = 'width: 75px';
-                } else if (isOffset) {
+                } else if (isCredit) {
                     gradeCell.innerText = 'Зачтено';
                     gradeCell.style = 'width: 60px';
                 } else if (gradeRatio < 0.7) {
                     gradeCell.innerText = 'Удовлетворительно';
                     gradeCell.style = 'width: 135px';
-                } else
+                } else if (gradeRatio < 0.86) {
+                    gradeCell.innerText = 'Хорошо';
                     gradeCell.style = 'width: 65px';
-            };
+                } else {
+                    gradeCell.innerText = 'Отлично';
+                    gradeCell.style = 'width: 65px';
+                }
+            }
 
 
             /**
