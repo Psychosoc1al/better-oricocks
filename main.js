@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.29.4
+// @version      1.29.5
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -74,10 +74,7 @@
                 '2 числитель': 2,
                 '2 знаменатель': 3
             };
-            const currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
-            const currentDayNumber = new Date().getDay();
-            const time = RegExp(/\d{2}:\d{2}:\d{2}/).exec(new Date().toUTCString())[0];
-            console.log(currentDayNumber, currentWeekNumber, time);
+            let scheduleTable;
 
 
             /**
@@ -378,7 +375,8 @@
                         }
             };
 
-            const setScheduleCSS = function () {
+
+            const setScheduleCSSAndHeader = function () {
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
@@ -389,6 +387,17 @@
                         break;
                     }
 
+                const scheduleTableBlank = document.createElement("table")
+                scheduleTableBlank.innerHTML = `
+                    <table>
+                      <tr>
+                        <th style="width: 20%">Номер</th>
+                        <th>Предмет, преподаватель</th>
+                        <th>Аудитория</th>
+                        <th>Время</th>
+                      </tr>
+                    </table>`;
+
                 const style = document.createElement('style');
                 style.innerHTML = `
                     div.alert.ng-scope table,
@@ -398,27 +407,43 @@
                       border: 1px solid black;
                       border-collapse: collapse;
                       width: 100%;
+                      text-align: center;
                     }`;
 
-                document.querySelector('.alert.ng-scope').innerHTML = `
-                    <table>
-                      <tr>
-                        <th>Company</th>
-                        <th>Contact</th>
-                        <th>Country</th>
-                      </tr>
-                      <tr>
-                        <td>Alfreds Futterkiste</td>
-                        <td>Maria Anders</td>
-                        <td>Germany</td>
-                      </tr>
-                      <tr>
-                        <td>Centro comercial Moctezuma</td>
-                        <td>Francisco Chang</td>
-                        <td>Mexico</td>
-                      </tr>
-                    </table>`;
-                document.querySelector('.alert.ng-scope').appendChild(style);
+                document.querySelector('.alert.ng-scope i').remove();
+                document.querySelector('.alert.ng-scope').append(scheduleTableBlank, style);
+                scheduleTable = document.querySelector('.alert.ng-scope tbody');
+                setSchedule();
+            }
+
+
+            const setSchedule = function () {
+                const currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+                const currentDayNumber = new Date().getDay();
+                const currentTime = RegExp(/\d{2}:\d{2}:\d{2}/).exec(new Date().toUTCString())[0];
+
+                loadValueByKey('schedule').then(schedule => {
+                    schedule = JSON.parse(JSON.stringify(schedule));
+                    const todaysLessons = schedule.filter(lesson =>
+                        lesson.dayNumber === currentDayNumber && lesson.weekNumber === currentWeekNumber
+                    ).reverse();
+                    console.log(todaysLessons);
+
+                    todaysLessons.forEach(lesson => appendScheduleTableRow(lesson));
+                })
+            }
+
+
+            const appendScheduleTableRow = function (lesson) {
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td style="width: 20%">${lesson.lessonNumber}</td>
+                    <td>${lesson.name}<br/>${lesson.teacher}</td>
+                    <td>${lesson.room}</td>
+                    <td>${lesson.startTime.match(/\d{2}:\d{2}/)[0]} - 
+                            ${lesson.endTime.match(/\d{2}:\d{2}/)[0]}</td>`;
+
+                scheduleTable.appendChild(newRow);
             }
 
 
@@ -428,7 +453,7 @@
             const onPageOpen = function () {
                 changeGradeFieldsSizes();
                 changeBodyWidth();
-                setScheduleCSS();
+                setScheduleCSSAndHeader();
                 loadDisciplinesGrades();
                 saveGroup();
             };
