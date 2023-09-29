@@ -76,6 +76,8 @@
             };
             const currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
             const currentDayNumber = new Date().getDay();
+            const time = RegExp(/\d{2}:\d{2}:\d{2}/).exec(new Date().toUTCString())[0];
+            console.log(currentDayNumber, currentWeekNumber, time);
 
 
             /**
@@ -182,7 +184,6 @@
              */
             const parseSchedule = function () {
                 return getSchedule().then(responseJSON => {
-                    console.log(responseJSON['Data'][0]);
                     const parsedSchedule = [];
 
                     for (const responseJSONElement of responseJSON['Data']) {
@@ -261,6 +262,8 @@
              */
             const updateDisciplineGrade = function () {
                 const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
+                if (!disciplineRow)
+                    return;
                 const isDisciplineNew = disciplineRow.querySelector('div.w46').innerText === '-';
 
                 if (!isDisciplineNew) {
