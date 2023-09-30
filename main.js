@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.29.5
+// @version      1.29.7
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -182,6 +182,7 @@
             const parseSchedule = function () {
                 return getSchedule().then(responseJSON => {
                     const parsedSchedule = [];
+                    const regExp = RegExp(/\d{2}:\d{2}/);
 
                     for (const responseJSONElement of responseJSON['Data']) {
                         const scheduleElement = {}
@@ -192,8 +193,8 @@
                         scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
                         scheduleElement['room'] = responseJSONElement['Room']['Name'];
                         scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
-                        scheduleElement['startTime'] = responseJSONElement['Time']['TimeFrom'];
-                        scheduleElement['endTime'] = responseJSONElement['Time']['TimeTo'];
+                        scheduleElement['startTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeFrom']).toString())[0];
+                        scheduleElement['endTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeTo']).toString())[0];
 
                         parsedSchedule.push(scheduleElement);
                     }
@@ -418,19 +419,57 @@
 
 
             const setSchedule = function () {
-                const currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
-                const currentDayNumber = new Date().getDay();
-                const currentTime = RegExp(/\d{2}:\d{2}:\d{2}/).exec(new Date().toUTCString())[0];
+                const currentTime = RegExp(/\d{2}:\d{2}/).exec(
+                    new Date().toLocaleTimeString('ru', {
+                        timeZone: 'Europe/Moscow',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                )[0];
+                let currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+                let currentDayNumber = new Date().getDay();
+                let searchDayNumber = currentDayNumber;
+                let closestLessons = [];
+
+                if (typeof currentWeekNumber === 'undefined') {
+                    setPreScheduleHeader(currentWeekNumber, currentDayNumber);
+                    return;
+                }
+
+                if (currentDayNumber === 0) {
+                    currentWeekNumber = (currentWeekNumber + 1) % 4;
+                    searchDayNumber = 1;
+                }
 
                 loadValueByKey('schedule').then(schedule => {
                     schedule = JSON.parse(JSON.stringify(schedule));
-                    const todaysLessons = schedule.filter(lesson =>
-                        lesson.dayNumber === currentDayNumber && lesson.weekNumber === currentWeekNumber
-                    ).reverse();
-                    console.log(todaysLessons);
 
-                    todaysLessons.forEach(lesson => appendScheduleTableRow(lesson));
+                    while (!closestLessons.length) {
+                        closestLessons = schedule.filter(lesson =>
+                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === currentWeekNumber &&
+                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : 1)
+                        )//.reverse();
+
+                        searchDayNumber = (currentDayNumber + 1) % 7;
+                        if (searchDayNumber === currentDayNumber) {
+                            currentWeekNumber = (currentWeekNumber + 1) % 4;
+                            searchDayNumber = 1;
+                        }
+                    }
+
+                    closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
+                    setPreScheduleHeader(currentWeekNumber, searchDayNumber);
                 })
+            }
+
+
+            const setPreScheduleHeader = function (currentWeekNumber, currentDayNumber) {
+                const preScheduleHeader = document.querySelector('h4 b');
+                if (!currentWeekNumber)
+                    preScheduleHeader.innerText = 'Расписания не привезли';
+                else
+                    preScheduleHeader.innerText += ', ' +
+                        new Date('2018-01-0' + currentDayNumber).toLocaleDateString('ru', {weekday: 'long'});
             }
 
 
