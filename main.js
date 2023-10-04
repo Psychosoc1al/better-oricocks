@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.28.1
+// @version      2.0.0
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -68,6 +68,13 @@
             )
             const targetNode = document.querySelectorAll('table.table-hover')[0];
             const config = {subtree: true, attributeFilter: ['class']};
+            const weeksNumbers = {
+                '1 числитель': 0,
+                '1 знаменатель': 1,
+                '2 числитель': 2,
+                '2 знаменатель': 3
+            };
+            let scheduleTable;
 
 
             /**
@@ -105,10 +112,12 @@
                     const currentGrade = row.querySelector('td span.grade').innerText;
                     const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
 
-                    loadValueByKey(disciplineName).then(value => {
-                        if (!isDisciplineNew && currentGrade <= value)
-                            row.querySelector('td span.grade').innerText = value;
-                    }).then(() => adjustGradeColor(row));
+                    loadValueByKey(disciplineName)
+                        .then(value => {
+                            if (!isDisciplineNew && parseFloat(currentGrade) <= parseFloat(value))
+                                row.querySelector('td span.grade').innerText = value;
+                        })
+                        .then(() => adjustGradeColor(row));
                 }
             }
 
@@ -149,11 +158,11 @@
 
 
             /**
-             * Parses the schedule by sending a request to 'https://miet.ru/schedule/data'.
+             * Gets the schedule by sending a request to 'https://miet.ru/schedule/data'.
              *
              * @return {Promise<Object>} A promise that resolves with the response text.
              */
-            const parseSchedule = function () {
+            const getSchedule = function () {
                 return sendRequest('https://miet.ru/schedule/data', 'POST')
                     .then(responseObject => {
                         const cookie = responseObject.responseText.match(/wl=.*;path=\//);
@@ -165,11 +174,42 @@
                     });
             };
 
+            /**
+             * Parses the schedule data received from the server.
+             *
+             * @return {Promise<Array<Object>>} An array of parsed schedule elements.
+             */
+            const parseSchedule = function () {
+                return getSchedule().then(responseJSON => {
+                    const parsedSchedule = [];
+                    const regExp = RegExp(/\d{2}:\d{2}/);
 
+                    for (const responseJSONElement of responseJSON['Data']) {
+                        const scheduleElement = {}
+
+                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
+                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
+                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
+                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
+                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
+                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
+                        scheduleElement['startTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeFrom']).toString())[0];
+                        scheduleElement['endTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeTo']).toString())[0];
+
+                        parsedSchedule.push(scheduleElement);
+                    }
+                    return parsedSchedule;
+                })
+            }
+
+
+            /**
+             * Saves the schedule by parsing it and storing the parsed result.
+             */
             const saveSchedule = function () {
-                parseSchedule().then(responseJSON => {
-                    console.log(responseJSON);
-                    saveKeyValue('schedule', responseJSON);
+                parseSchedule().then(parsedSchedule => {
+                    console.log(parsedSchedule);
+                    saveKeyValue('schedule', parsedSchedule);
                 })
             };
 
@@ -223,6 +263,8 @@
              */
             const updateDisciplineGrade = function () {
                 const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
+                if (!disciplineRow)
+                    return;
                 const isDisciplineNew = disciplineRow.querySelector('div.w46').innerText === '-';
 
                 if (!isDisciplineNew) {
@@ -300,20 +342,25 @@
             const correctGradeName = function (disciplineRow) {
                 const gradeCell = document.querySelector('td.text-right span.grade');
                 const gradeRatio = getGradeRatio(disciplineRow);
-                const isOffset = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
+                const isCredit = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
 
                 if (gradeRatio < 0.5) {
                     gradeCell.innerText = 'Незачтено';
                     gradeCell.style = 'width: 75px';
-                } else if (isOffset) {
+                } else if (isCredit) {
                     gradeCell.innerText = 'Зачтено';
                     gradeCell.style = 'width: 60px';
                 } else if (gradeRatio < 0.7) {
                     gradeCell.innerText = 'Удовлетворительно';
                     gradeCell.style = 'width: 135px';
-                } else
+                } else if (gradeRatio < 0.86) {
+                    gradeCell.innerText = 'Хорошо';
                     gradeCell.style = 'width: 65px';
-            };
+                } else {
+                    gradeCell.innerText = 'Отлично';
+                    gradeCell.style = 'width: 65px';
+                }
+            }
 
 
             /**
@@ -334,11 +381,146 @@
 
 
             /**
+             * Sets the schedule CSS and header.
+             */
+            const setScheduleCSSAndHeader = function () {
+                for (const sheet of document.styleSheets)
+                    if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
+                        for (const element of sheet.cssRules)
+                            if (element.cssText.startsWith('.alert {') && element.style['padding']) {
+                                element.style['padding'] = 0;
+                                element.style['margin-bottom'] = 0;
+                            }
+                        break;
+                    }
+
+                const scheduleTableBlank = document.createElement("table")
+                scheduleTableBlank.innerHTML = `
+                    <table>
+                      <tr>
+                        <th style="width: 20%">Номер</th>
+                        <th>Предмет, преподаватель</th>
+                        <th style="padding: 3px">Аудитория</th>
+                        <th style="padding: 3px">Время</th>
+                      </tr>
+                    </table>`;
+
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    div.alert.ng-scope table,
+                    div.alert.ng-scope table tr,
+                    div.alert.ng-scope table th,
+                    div.alert.ng-scope table td {
+                      border: 1px solid black;
+                      border-collapse: collapse;
+                      width: 100%;
+                      text-align: center;
+                    }`;
+
+                document.querySelector('.col-md-4 .well h4').style['margin-left'] = '5px'
+                document.querySelectorAll('.col-md-4 .well')[1].style['padding-left'] = '5px';
+                document.querySelectorAll('.col-md-4 .well')[1].style['padding-right'] = '5px';
+                document.querySelector('.alert.ng-scope i').remove();
+                document.querySelector('.alert.ng-scope').append(scheduleTableBlank, style);
+                scheduleTable = document.querySelector('.alert.ng-scope tbody');
+                setSchedule();
+            }
+
+
+            /**
+             * Sets the schedule based on the current time and day or on finds the closest lessons.
+             */
+            const setSchedule = function () {
+                const currentTime = RegExp(/\d{2}:\d{2}/).exec(
+                    new Date().toLocaleTimeString('ru', {
+                        timeZone: 'Europe/Moscow',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                )[0];
+                let searchWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+                let currentDayNumber = new Date().getDay();
+                let searchDayNumber = currentDayNumber;
+                let closestLessons = [];
+
+                if (typeof searchWeekNumber === 'undefined') {
+                    setPreScheduleHeader(currentDayNumber, false);
+                    return;
+                }
+
+                if (currentDayNumber === 0) {
+                    searchWeekNumber = (searchWeekNumber + 1) % 4;
+                    searchDayNumber = 1;
+                }
+
+                loadValueByKey('schedule').then(schedule => {
+                    schedule = JSON.parse(JSON.stringify(schedule));
+
+                    while (!closestLessons.length) {
+                        closestLessons = schedule.filter(lesson =>
+                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
+                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
+                            !lesson.teacher.includes('УВЦ')
+                        )
+
+                        searchDayNumber = (searchDayNumber + 1) % 7;
+                        if (searchDayNumber === 0) {
+                            searchWeekNumber = (searchWeekNumber + 1) % 4;
+                            searchDayNumber = 1;
+                        }
+                    }
+
+                    closestLessons.sort((a, b) => {
+                        return (a.lessonNumber < b.lessonNumber) ? -1 : 1;
+                    })
+
+                    closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
+                    setPreScheduleHeader(searchDayNumber);
+                })
+            }
+
+
+            /**
+             * Sets the header for the pre-schedule based on the search day number.
+             *
+             * @param {number} searchDayNumber - The number of the search day.
+             * @param {boolean} hasSchedule - Optional. Indicates if there is a schedule for week. Default is true.
+             */
+            const setPreScheduleHeader = function (searchDayNumber, hasSchedule = true) {
+                const preScheduleHeader = document.querySelector('h4 b');
+                if (!hasSchedule)
+                    preScheduleHeader.innerText = 'Расписания не привезли';
+                else
+                    preScheduleHeader.innerText += ', ' +
+                        new Date('2018-01-0' + searchDayNumber).toLocaleDateString('ru', {weekday: 'long'});
+            }
+
+
+            /**
+             * Appends a new row to the schedule table with the details of the given lesson.
+             *
+             * @param {object} lesson - The lesson object containing the lesson details.
+             */
+            const appendScheduleTableRow = function (lesson) {
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td style="width: 20%">${lesson.lessonNumber}</td>
+                    <td>${lesson.name}<br/>${lesson.teacher}</td>
+                    <td>${lesson.room}</td>
+                    <td>${lesson.startTime.match(/\d{2}:\d{2}/)[0]} <br/>  
+                            ${lesson.endTime.match(/\d{2}:\d{2}/)[0]}</td>`;
+
+                scheduleTable.appendChild(newRow);
+            }
+
+
+            /**
              * Executes the necessary actions when the page is opened.
              */
             const onPageOpen = function () {
                 changeGradeFieldsSizes();
                 changeBodyWidth();
+                setScheduleCSSAndHeader();
                 loadDisciplinesGrades();
                 saveGroup();
             };
