@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      1.29.7
+// @version      1.29.8
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -203,6 +203,9 @@
             }
 
 
+            /**
+             * Saves the schedule by parsing it and storing the parsed result.
+             */
             const saveSchedule = function () {
                 parseSchedule().then(parsedSchedule => {
                     console.log(parsedSchedule);
@@ -377,6 +380,9 @@
             };
 
 
+            /**
+             * Sets the schedule CSS and header.
+             */
             const setScheduleCSSAndHeader = function () {
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
@@ -394,8 +400,8 @@
                       <tr>
                         <th style="width: 20%">Номер</th>
                         <th>Предмет, преподаватель</th>
-                        <th>Аудитория</th>
-                        <th>Время</th>
+                        <th style="padding: 3px">Аудитория</th>
+                        <th style="padding: 3px">Время</th>
                       </tr>
                     </table>`;
 
@@ -411,6 +417,9 @@
                       text-align: center;
                     }`;
 
+                document.querySelector('.col-md-4 .well h4').style['margin-left'] = '5px'
+                document.querySelectorAll('.col-md-4 .well')[1].style['padding-left'] = '5px';
+                document.querySelectorAll('.col-md-4 .well')[1].style['padding-right'] = '5px';
                 document.querySelector('.alert.ng-scope i').remove();
                 document.querySelector('.alert.ng-scope').append(scheduleTableBlank, style);
                 scheduleTable = document.querySelector('.alert.ng-scope tbody');
@@ -418,6 +427,9 @@
             }
 
 
+            /**
+             * Sets the schedule based on the current time and day or on finds the closest lessons.
+             */
             const setSchedule = function () {
                 const currentTime = RegExp(/\d{2}:\d{2}/).exec(
                     new Date().toLocaleTimeString('ru', {
@@ -426,18 +438,18 @@
                         minute: '2-digit'
                     })
                 )[0];
-                let currentWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+                let searchWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
                 let currentDayNumber = new Date().getDay();
                 let searchDayNumber = currentDayNumber;
                 let closestLessons = [];
 
-                if (typeof currentWeekNumber === 'undefined') {
-                    setPreScheduleHeader(currentWeekNumber, currentDayNumber);
+                if (typeof searchWeekNumber === 'undefined') {
+                    setPreScheduleHeader(currentDayNumber, false);
                     return;
                 }
 
                 if (currentDayNumber === 0) {
-                    currentWeekNumber = (currentWeekNumber + 1) % 4;
+                    searchWeekNumber = (searchWeekNumber + 1) % 4;
                     searchDayNumber = 1;
                 }
 
@@ -446,40 +458,56 @@
 
                     while (!closestLessons.length) {
                         closestLessons = schedule.filter(lesson =>
-                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === currentWeekNumber &&
-                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : 1)
-                        )//.reverse();
+                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
+                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
+                            !lesson.teacher.includes('УВЦ')
+                        )
 
-                        searchDayNumber = (currentDayNumber + 1) % 7;
-                        if (searchDayNumber === currentDayNumber) {
-                            currentWeekNumber = (currentWeekNumber + 1) % 4;
+                        searchDayNumber = (searchDayNumber + 1) % 7;
+                        if (searchDayNumber === 0) {
+                            searchWeekNumber = (searchWeekNumber + 1) % 4;
                             searchDayNumber = 1;
                         }
                     }
 
+                    closestLessons.sort((a, b) => {
+                        return (a.lessonNumber < b.lessonNumber) ? -1 : 1;
+                    })
+
                     closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
-                    setPreScheduleHeader(currentWeekNumber, searchDayNumber);
+                    setPreScheduleHeader(searchDayNumber);
                 })
             }
 
 
-            const setPreScheduleHeader = function (currentWeekNumber, currentDayNumber) {
+            /**
+             * Sets the header for the pre-schedule based on the search day number.
+             *
+             * @param {number} searchDayNumber - The number of the search day.
+             * @param {boolean} hasSchedule - Optional. Indicates if there is a schedule for week. Default is true.
+             */
+            const setPreScheduleHeader = function (searchDayNumber, hasSchedule = true) {
                 const preScheduleHeader = document.querySelector('h4 b');
-                if (!currentWeekNumber)
+                if (!hasSchedule)
                     preScheduleHeader.innerText = 'Расписания не привезли';
                 else
                     preScheduleHeader.innerText += ', ' +
-                        new Date('2018-01-0' + currentDayNumber).toLocaleDateString('ru', {weekday: 'long'});
+                        new Date('2018-01-0' + searchDayNumber).toLocaleDateString('ru', {weekday: 'long'});
             }
 
 
+            /**
+             * Appends a new row to the schedule table with the details of the given lesson.
+             *
+             * @param {object} lesson - The lesson object containing the lesson details.
+             */
             const appendScheduleTableRow = function (lesson) {
                 const newRow = document.createElement('tr');
                 newRow.innerHTML = `
                     <td style="width: 20%">${lesson.lessonNumber}</td>
                     <td>${lesson.name}<br/>${lesson.teacher}</td>
                     <td>${lesson.room}</td>
-                    <td>${lesson.startTime.match(/\d{2}:\d{2}/)[0]} - 
+                    <td>${lesson.startTime.match(/\d{2}:\d{2}/)[0]} <br/>  
                             ${lesson.endTime.match(/\d{2}:\d{2}/)[0]}</td>`;
 
                 scheduleTable.appendChild(newRow);
