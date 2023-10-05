@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      2.0.1
+// @version      2.0.2
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=miet.ru
+// @icon         https://orioks.miet.ru/favicon.ico
 // @updateURL    https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
 // @downloadURL  https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
 // @grant        GM_xmlhttpRequest
@@ -263,17 +263,20 @@
              */
             const updateDisciplineGrade = function () {
                 const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
+                const mobileUpperRow = document.querySelector('tr.click');
                 if (!disciplineRow)
                     return;
                 const isDisciplineNew = disciplineRow.querySelector('div.w46').innerText === '-';
 
                 if (!isDisciplineNew) {
                     const gradeSpan = disciplineRow.querySelector('td span.grade');
+                    const mobileGradeSpan = document.querySelector('th span.grade');
                     const sum = sumGrades();
 
                     gradeSpan.innerText = adjustNumber(sum);
+                    mobileGradeSpan.innerText = gradeSpan.innerText;
                     observer.disconnect();
-                    adjustGradeColor(disciplineRow);
+                    adjustGradeColor(disciplineRow, mobileUpperRow);
                     observer.observe(targetNode, config);
                     saveDisciplineGrade(gradeSpan);
                 }
@@ -309,14 +312,19 @@
              * Adjusts the color of the grade in a discipline row based on the grade ratio.
              *
              * @param {Element} disciplineRow - The discipline row element in the DOM.
+             * @param {Element} mobileUpperRow - The discipline row element for mobiles in the DOM.
              */
-            const adjustGradeColor = function (disciplineRow) {
-                const gradeClass = disciplineRow.querySelector('td span.grade').attributes['class'];
-                const namedGradeClass = document.querySelector('td.text-right span.grade').attributes['class'];
+            const adjustGradeColor = function (disciplineRow, mobileUpperRow = null) {
                 const newClass = countNewGradeClass(disciplineRow);
-
-                gradeClass.value = gradeClass.value.replace(/\d/, newClass);
+                const namedGradeClass = document.querySelector(`td.text-right span.grade`).attributes['class'];
                 namedGradeClass.value = namedGradeClass.value.replace(/\d/, newClass);
+
+                for (const row of [disciplineRow, mobileUpperRow]) {
+                    if (row) {
+                        const gradeClass = row.querySelector(`t${row === disciplineRow ? 'd' : 'h'} span.grade`).attributes['class'];
+                        gradeClass.value = gradeClass.value.replace(/\d/, newClass);
+                    }
+                }
             };
 
 
