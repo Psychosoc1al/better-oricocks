@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0
+// @version      2.0.1
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -440,7 +440,7 @@
                 )[0];
                 let searchWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
                 let currentDayNumber = new Date().getDay();
-                let searchDayNumber = currentDayNumber;
+                let searchDayNumber = currentDayNumber - 1;
                 let closestLessons = [];
 
                 if (typeof searchWeekNumber === 'undefined') {
@@ -450,24 +450,24 @@
 
                 if (currentDayNumber === 0) {
                     searchWeekNumber = (searchWeekNumber + 1) % 4;
-                    searchDayNumber = 1;
+                    searchDayNumber = 0;
                 }
 
                 loadValueByKey('schedule').then(schedule => {
                     schedule = JSON.parse(JSON.stringify(schedule));
 
                     while (!closestLessons.length) {
-                        closestLessons = schedule.filter(lesson =>
-                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
-                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
-                            !lesson.teacher.includes('УВЦ')
-                        )
-
                         searchDayNumber = (searchDayNumber + 1) % 7;
                         if (searchDayNumber === 0) {
                             searchWeekNumber = (searchWeekNumber + 1) % 4;
                             searchDayNumber = 1;
                         }
+
+                        closestLessons = schedule.filter(lesson =>
+                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
+                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
+                            !lesson.teacher.includes('УВЦ')
+                        )
                     }
 
                     closestLessons.sort((a, b) => {
@@ -534,4 +534,3 @@
     }
 )
 ();
-
