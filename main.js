@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      2.0.2
+// @version      2.0.3
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -208,7 +208,6 @@
              */
             const saveSchedule = function () {
                 parseSchedule().then(parsedSchedule => {
-                    console.log(parsedSchedule);
                     saveKeyValue('schedule', parsedSchedule);
                 })
             };
@@ -446,7 +445,10 @@
                         minute: '2-digit'
                     })
                 )[0];
-                let searchWeekNumber = weeksNumbers[document.querySelector('.small').innerText.split('\n')[1]];
+                let stringCurrentWeek = document.querySelector('.small').innerText.split('\n')[1];
+                if (!stringCurrentWeek)
+                    stringCurrentWeek = document.querySelector('.small').innerText.split(' ').slice(3).join(' ')
+                let searchWeekNumber = weeksNumbers[stringCurrentWeek];
                 let currentDayNumber = new Date().getDay();
                 let searchDayNumber = currentDayNumber - 1;
                 let closestLessons = [];
@@ -479,7 +481,7 @@
                     }
 
                     closestLessons.sort((a, b) => {
-                        return (a.lessonNumber < b.lessonNumber) ? -1 : 1;
+                        return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
                     })
 
                     closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
