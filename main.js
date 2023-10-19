@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      2.0.4
+// @version      2.0.5
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
 // @icon         https://orioks.miet.ru/favicon.ico
 // @updateURL    https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
 // @downloadURL  https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
+// @connect      miet.ru
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
