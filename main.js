@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
 // @namespace    http://tampermonkey.net/
-// @version      2.0.3
+// @version      2.0.4
 // @description  Изменение подсчёта баллов и местами дизайна
 // @author       Antonchik
 // @match        https://orioks.miet.ru/*
@@ -422,6 +422,7 @@
                       border-collapse: collapse;
                       width: 100%;
                       text-align: center;
+                      padding: 5px;
                     }`;
 
                 document.querySelector('.col-md-4 .well h4').style['margin-left'] = '5px'
@@ -513,12 +514,18 @@
              */
             const appendScheduleTableRow = function (lesson) {
                 const newRow = document.createElement('tr');
+                let startTime = lesson.startTime.match(/\d{2}:\d{2}/)[0];
+                let endTime = lesson.endTime.match(/\d{2}:\d{2}/)[0];
+                if (startTime === "12:00")
+                    startTime += "/30";
+                if (endTime === "13:20")
+                    endTime += "/50";
+
                 newRow.innerHTML = `
                     <td style="width: 20%">${lesson.lessonNumber}</td>
-                    <td>${lesson.name}<br/>${lesson.teacher}</td>
+                    <td>${lesson.name} <br/> ~ <br/> ${lesson.teacher}</td>
                     <td>${lesson.room}</td>
-                    <td>${lesson.startTime.match(/\d{2}:\d{2}/)[0]} <br/>  
-                            ${lesson.endTime.match(/\d{2}:\d{2}/)[0]}</td>`;
+                    <td>${startTime} <br/>-<br/> ${endTime}</td>`;
 
                 scheduleTable.appendChild(newRow);
             }
