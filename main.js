@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @namespace    http://tampermonkey.net/
-// @version      2.0.5
-// @description  Изменение подсчёта баллов и местами дизайна
+// @version      2.0.6
+// @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания
+// @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
+// @namespace    https://github.com/Psychosoc1al
 // @match        https://orioks.miet.ru/*
 // @icon         https://orioks.miet.ru/favicon.ico
 // @updateURL    https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
