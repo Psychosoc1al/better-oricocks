@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.0.7
-// @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания
+// @version      2.0.8
+// @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания (когда нет официального)
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
 // @namespace    https://github.com/Psychosoc1al
