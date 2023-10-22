@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.0.6
+// @version      2.0.7
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -393,6 +393,9 @@
              * Sets the schedule CSS and header.
              */
             const setScheduleCSSAndHeader = function () {
+                if (!document.querySelector('.alert.ng-scope i'))
+                    return;
+
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
