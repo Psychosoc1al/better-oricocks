@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.0
+// @version      2.5.1
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -174,8 +174,11 @@
              * @param {number} number - The number to be adjusted.
              * @return {string} The adjusted number as a string.
              */
-            const ratioToStringPercent = function (number) {
-                let stringedNumber = (Math.min(number, 1) * 100).toFixed(2);
+            const numberToFixedString = function (number) {
+                if (!number)
+                    return '0';
+
+                let stringedNumber = number.toFixed(2);
 
                 while (stringedNumber.endsWith('0'))
                     stringedNumber = stringedNumber.slice(0, -1);
@@ -397,8 +400,9 @@
                             sum += balls['ball'];
                     }
 
-                    grade['b'] = sum
-                    grade['p'] = ratioToStringPercent(sum / maxPossibleSum);
+                    grade['b'] = numberToFixedString(sum); // current ball
+                    grade['p'] = numberToFixedString(sum / maxPossibleSum * 100); // current percentage
+                    // [maximal grade ("из ..."), class attribute for coloring]
                     [grade['w'], grade['o']] = getGradeNameAndType(sum / maxPossibleSum, controlForm);
                 }
 
@@ -414,6 +418,7 @@
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setScheduleCSSAndHeader();
+
                 saveGroup();
                 saveSchedule();
             };
