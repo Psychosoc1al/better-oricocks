@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.0.9
-// @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания (когда нет официального)
+// @version      2.5.0
+// @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
 // @namespace    https://github.com/Psychosoc1al
 // @match        https://orioks.miet.ru/*
 // @icon         https://orioks.miet.ru/favicon.ico
-// @updateURL    https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
-// @downloadURL  https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
+// @run-at       document-body
 // @connect      miet.ru
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -60,16 +59,6 @@
 
 
         if (document.URL.includes('student/student')) {
-            const observer = new MutationObserver(
-                (mutationsList) => {
-                    const disciplineSelected = mutationsList[mutationsList[0].target.outerHTML.includes(' info') ? 0 : 1];
-                    if (disciplineSelected)
-                        correctGradeName(disciplineSelected.target);
-                    updateDisciplineGrade();
-                }
-            )
-            const targetNode = document.querySelectorAll('table.table-hover')[0];
-            const config = {subtree: true, attributeFilter: ['class']};
             const weeksNumbers = {
                 '1 числитель': 0,
                 '1 знаменатель': 1,
@@ -80,47 +69,11 @@
 
 
             /**
-             * Save the discipline grade.
-             *
-             * @param {Element} gradeSpan - the grade span element
-             */
-            const saveDisciplineGrade = function (gradeSpan) {
-                const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
-                let name = disciplineRow.querySelector('td.ng-binding').innerText;
-
-                name += ', ' + document.querySelector('option[selected="selected"]').innerText;
-                saveKeyValue(name, gradeSpan['innerText']);
-            }
-
-
-            /**
              * Saves the group value by extracting it from the selected option of a dropdown list.
              */
             const saveGroup = function () {
                 const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
                 saveKeyValue('group', group);
-            }
-
-
-            /**
-             * Load discipline grades from the DOM and update the current grade if it is lower than the stored value.
-             */
-            const loadDisciplinesGrades = function () {
-                const disciplineRows = document.querySelectorAll('tr.pointer.ng-scope');
-                const selectedTerm = document.querySelector('option[selected="selected"]').innerText;
-
-                for (const row of disciplineRows) {
-                    const disciplineName = row.querySelector('td.ng-binding').innerText + ', ' + selectedTerm;
-                    const currentGrade = row.querySelector('td span.grade').innerText;
-                    const isDisciplineNew = row.querySelector('div.w46').innerText === '-';
-
-                    loadValueByKey(disciplineName)
-                        .then(value => {
-                            if (!isDisciplineNew && parseFloat(currentGrade) <= parseFloat(value))
-                                row.querySelector('td span.grade').innerText = value;
-                        })
-                        .then(() => adjustGradeColor(row));
-                }
             }
 
 
@@ -216,38 +169,13 @@
 
 
             /**
-             * Calculates the sum of all the grades in the grades list.
-             *
-             * @return {number} The sum of all the grades.
-             */
-            const sumGrades = function () {
-                const gradesList = document.querySelectorAll('span.grade');
-                let sum = 0;
-
-                for (const grade of gradesList) {
-                    const isInsideRestricted = (
-                        grade.closest('div[ng-class]') || grade.closest('tr[ng-class="class_l()"]')
-                    ) !== null;
-
-                    if (!isInsideRestricted) {
-                        const gradeValue = parseFloat(grade.innerText);
-                        if (!isNaN(gradeValue))
-                            sum += gradeValue;
-                    }
-                }
-
-                return sum;
-            };
-
-
-            /**
              * Adjusts a number by removing trailing zeros and the decimal point if necessary.
              *
              * @param {number} number - The number to be adjusted.
              * @return {string} The adjusted number as a string.
              */
-            const adjustNumber = function (number) {
-                let stringedNumber = number.toFixed(2);
+            const ratioToStringPercent = function (number) {
+                let stringedNumber = (Math.min(number, 1) * 100).toFixed(2);
 
                 while (stringedNumber.endsWith('0'))
                     stringedNumber = stringedNumber.slice(0, -1);
@@ -260,114 +188,26 @@
 
 
             /**
-             * Updates the discipline grade.
-             */
-            const updateDisciplineGrade = function () {
-                const disciplineRow = document.querySelector('tr.pointer.ng-scope.info');
-                const mobileUpperRow = document.querySelector('tr.click');
-                if (!disciplineRow)
-                    return;
-                const isDisciplineNew = disciplineRow.querySelector('div.w46').innerText === '-';
-
-                if (!isDisciplineNew) {
-                    const gradeSpan = disciplineRow.querySelector('td span.grade');
-                    const mobileGradeSpan = document.querySelector('th span.grade');
-                    const sum = sumGrades();
-
-                    gradeSpan.innerText = adjustNumber(sum);
-                    mobileGradeSpan.innerText = gradeSpan.innerText;
-                    observer.disconnect();
-                    adjustGradeColor(disciplineRow, mobileUpperRow);
-                    observer.observe(targetNode, config);
-                    saveDisciplineGrade(gradeSpan);
-                }
-            };
-
-
-            /**
-             * Calculates the new grade class based on the grade ratio.
-             *
-             * @param {Element} disciplineRow - The discipline row object.
-             * @return {string} The new grade class as a string.
-             */
-            const countNewGradeClass = function (disciplineRow) {
-                const gradeRatio = getGradeRatio(disciplineRow);
-                let newClass;
-
-                if (gradeRatio < 0.2)
-                    newClass = 1
-                else if (gradeRatio < 0.5)
-                    newClass = 2
-                else if (gradeRatio < 0.7)
-                    newClass = 3
-                else if (gradeRatio < 0.86)
-                    newClass = 4
-                else
-                    newClass = 5
-
-                return newClass.toString();
-            };
-
-
-            /**
-             * Adjusts the color of the grade in a discipline row based on the grade ratio.
-             *
-             * @param {Element} disciplineRow - The discipline row element in the DOM.
-             * @param {Element} mobileUpperRow - The discipline row element for mobiles in the DOM.
-             */
-            const adjustGradeColor = function (disciplineRow, mobileUpperRow = null) {
-                const newClass = countNewGradeClass(disciplineRow);
-                const namedGradeClass = document.querySelector(`td.text-right span.grade`).attributes['class'];
-                namedGradeClass.value = namedGradeClass.value.replace(/\d/, newClass);
-
-                for (const row of [disciplineRow, mobileUpperRow]) {
-                    if (row) {
-                        const gradeClass = row.querySelector(`t${row === disciplineRow ? 'd' : 'h'} span.grade`).attributes['class'];
-                        gradeClass.value = gradeClass.value.replace(/\d/, newClass);
-                    }
-                }
-            };
-
-
-            /**
-             * Calculates the grade ratio for a given discipline row.
-             *
-             * @param {Element} disciplineRow - The discipline row element.
-             * @return {number} The grade ratio.
-             */
-            const getGradeRatio = function (disciplineRow) {
-                let currentGrade = disciplineRow.querySelector('td span.grade').innerText;
-                let maxGrade = disciplineRow.querySelector('td.mvb div').innerText.split(' ')[1];
-
-                return parseFloat(currentGrade) / parseFloat(maxGrade);
-            };
-
-
-            /**
              * Change written grade field sizes based on the grade ratio.
              *
-             * @param {Element} disciplineRow - the discipline row object
+             * @param {number} gradeRatio - the discipline row object
+             * @param {string} controlForm - the control form
+             *
+             * @return {[string, number]} The new grade class as a string
              */
-            const correctGradeName = function (disciplineRow) {
-                const gradeCell = document.querySelector('td.text-right span.grade');
-                const gradeRatio = getGradeRatio(disciplineRow);
-                const isCredit = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
+            const getGradeNameAndType = function (gradeRatio, controlForm) {
+                const isCredit = controlForm === 'Зачёт';
 
                 if (gradeRatio < 0.5) {
-                    gradeCell.innerText = 'Незачтено';
-                    gradeCell.style = 'width: 75px';
-                } else if (isCredit) {
-                    gradeCell.innerText = 'Зачтено';
-                    gradeCell.style = 'width: 60px';
+                    if (gradeRatio < 0.2)
+                        return ['Незачтено', 1];
+                    return ['Незачтено', 2];
                 } else if (gradeRatio < 0.7) {
-                    gradeCell.innerText = 'Удовлетворительно';
-                    gradeCell.style = 'width: 135px';
+                    return [isCredit ? 'Зачтено' : 'Удовлетворительно', 3];
                 } else if (gradeRatio < 0.86) {
-                    gradeCell.innerText = 'Хорошо';
-                    gradeCell.style = 'width: 65px';
+                    return [isCredit ? 'Зачтено' : 'Хорошо', 4];
                 } else {
-                    gradeCell.innerText = 'Отлично';
-                    gradeCell.style = 'width: 65px';
+                    return [isCredit ? 'Зачтено' : 'Отлично', 5];
                 }
             }
 
@@ -386,6 +226,7 @@
                                 element['style'].padding = '3px';
                             }
                         }
+                document.querySelector('span[style="width: 60px"]').style.width = 'fit-content';
             };
 
 
@@ -400,8 +241,8 @@
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
                             if (element.cssText.startsWith('.alert {') && element.style['padding']) {
-                                element.style['padding'] = 0;
-                                element.style['margin-bottom'] = 0;
+                                element.style['padding'] = '0';
+                                element.style['margin-bottom'] = '0';
                             }
                         break;
                     }
@@ -536,21 +377,49 @@
             }
 
 
+            const updateGrades = function () {
+                const source = document.querySelector('#forang');
+                const raw_data = source.textContent;
+                const jsonData = JSON.parse(raw_data);
+                const disciplines = jsonData['dises'];
+
+                for (let i = 0; i < disciplines.length; i++) {
+                    const controlPoints = disciplines[i]['segments'][0]['allKms'];
+                    const grade = disciplines[i]['grade'];
+                    const controlForm = disciplines[i]['formControl']['name'];
+                    const maxPossibleSum = disciplines[i]['mvb'];
+                    let sum = 0;
+
+                    for (let j = 0; j < controlPoints.length; j++) {
+                        const balls = controlPoints[j]['balls'][0];
+
+                        if (balls && balls['ball'] > 0)
+                            sum += balls['ball'];
+                    }
+
+                    grade['b'] = sum
+                    grade['p'] = ratioToStringPercent(sum / maxPossibleSum);
+                    [grade['w'], grade['o']] = getGradeNameAndType(sum / maxPossibleSum, controlForm);
+                }
+
+                source.textContent = JSON.stringify(jsonData);
+            }
+
+
             /**
              * Executes the necessary actions when the page is opened.
              */
             const onPageOpen = function () {
+                updateGrades();
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setScheduleCSSAndHeader();
-                loadDisciplinesGrades();
                 saveGroup();
+                saveSchedule();
             };
 
 
-            setTimeout(saveSchedule, 1);
-            setTimeout(onPageOpen, 10);
-            setTimeout(() => observer.observe(targetNode, config), 50);
+            onPageOpen();
         } else if (document.URL.includes('orioks.miet.ru'))
             changeBodyWidth();
     }
