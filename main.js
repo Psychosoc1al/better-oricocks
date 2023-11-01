@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.1.0
+// @version      2.1.1
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания (когда нет официального)
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -63,7 +63,7 @@
                 (mutationsList) => {
                     const disciplineSelected = mutationsList[mutationsList[0].target.outerHTML.includes(' info') ? 0 : 1];
                     if (disciplineSelected)
-                        correctGradeName(disciplineSelected.target);
+                        getGradeNameAndType(disciplineSelected.target);
                     updateDisciplineGrade();
                 }
             )
@@ -246,8 +246,8 @@
              * @param {number} number - The number to be adjusted.
              * @return {string} The adjusted number as a string.
              */
-            const doubleToString = function (number) {
-                let stringedNumber = number.toFixed(2);
+            const ratioToStringPercent = function (number) {
+                let stringedNumber = (Math.min(number, 1) * 100).toFixed(2);
 
                 while (stringedNumber.endsWith('0'))
                     stringedNumber = stringedNumber.slice(0, -1);
@@ -274,7 +274,7 @@
                     const mobileGradeSpan = document.querySelector('th span.grade');
                     const sum = sumGrades();
 
-                    gradeSpan.innerText = doubleToString(sum);
+                    gradeSpan.innerText = ratioToStringPercent(sum);
                     mobileGradeSpan.innerText = gradeSpan.innerText;
                     observer.disconnect();
                     adjustGradeColor(disciplineRow, mobileUpperRow);
@@ -347,25 +347,23 @@
              * Change written grade field sizes based on the grade ratio.
              *
              * @param {number} gradeRatio - the discipline row object
+             * @param {string} controlForm - the control form
+             *
+             * @return {[string, number]} The new grade class as a string
              */
-            const correctGradeName = function (gradeRatio, controlForm) {
+            const getGradeNameAndType = function (gradeRatio, controlForm) {
                 const isCredit = controlForm === 'Зачёт';
 
                 if (gradeRatio < 0.5) {
-                    return 'Незачтено';
-                    // gradeCell.style = 'width: 75px';
-                } else if (isCredit) {
-                    return 'Зачтено';
-                    // gradeCell.style = 'width: 60px';
+                    if (gradeRatio < 0.2)
+                        return ['Незачтено', 1];
+                    return ['Незачтено', 2];
                 } else if (gradeRatio < 0.7) {
-                    return 'Удовлетворительно';
-                    // gradeCell.style = 'width: 135px';
+                    return [isCredit ? 'Зачтено' : 'Удовлетворительно', 3];
                 } else if (gradeRatio < 0.86) {
-                    return 'Хорошо';
-                    // gradeCell.style = 'width: 65px';
+                    return [isCredit ? 'Зачтено' : 'Хорошо', 4];
                 } else {
-                    return 'Отлично';
-                    // gradeCell.style = 'width: 65px';
+                    return [isCredit ? 'Зачтено' : 'Отлично', 5];
                 }
             }
 
@@ -545,23 +543,19 @@
                     const controlPoints = disciplines[i]['segments'][0]['allKms'];
                     const grade = disciplines[i]['grade'];
                     const controlForm = disciplines[i]['formControl']['name'];
+                    const maxPossibleSum = disciplines[i]['mvb'];
                     let sum = 0;
-                    let maxPossibleSum = 0;
 
                     for (let j = 0; j < controlPoints.length; j++) {
                         const balls = controlPoints[j]['balls'][0];
 
-                        if (balls && balls['ball'] > 0) {
+                        if (balls && balls['ball'] > 0)
                             sum += balls['ball'];
-                            maxPossibleSum += controlPoints[j]['max_ball'];
-                        }
                     }
 
                     grade['b'] = sum
-                    grade['p'] = doubleToString(sum / maxPossibleSum * 100);
-                    grade['w'] = correctGradeName(sum / maxPossibleSum, controlForm);
-
-                    console.log(disciplineName, sum, 'of', maxPossibleSum, disciplines[i]['grade']);
+                    grade['p'] = ratioToStringPercent(sum / maxPossibleSum);
+                    [grade['w'], grade['o']] = getGradeNameAndType(sum / maxPossibleSum, controlForm);
                 }
 
                 source.textContent = JSON.stringify(jsonData);
@@ -572,9 +566,6 @@
              * Executes the necessary actions when the page is opened.
              */
             const onPageOpen = function () {
-                changeGradeFieldsSizes();
-                changeBodyWidth();
-                setScheduleCSSAndHeader();
 
                 loadDisciplinesGrades();
                 saveGroup();
@@ -582,6 +573,9 @@
 
 
             updateGrades();
+            changeGradeFieldsSizes();
+            changeBodyWidth();
+            setScheduleCSSAndHeader();
             // setTimeout(saveSchedule, 1);
             // setTimeout(onPageOpen, 10);
             // setTimeout(() => observer.observe(targetNode, config), 50);
