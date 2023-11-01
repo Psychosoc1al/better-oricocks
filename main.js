@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.0.9
+// @version      2.1.0
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление расписания (когда нет официального)
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
 // @namespace    https://github.com/Psychosoc1al
 // @match        https://orioks.miet.ru/*
 // @icon         https://orioks.miet.ru/favicon.ico
-// @updateURL    https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
-// @downloadURL  https://raw.githubusercontent.com/Psychosoc1al/better-oricocks/master/main.js
+// @run-at       document-body
 // @connect      miet.ru
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -77,6 +76,7 @@
                 '2 знаменатель': 3
             };
             let scheduleTable;
+            let jsonData;
 
 
             /**
@@ -246,7 +246,7 @@
              * @param {number} number - The number to be adjusted.
              * @return {string} The adjusted number as a string.
              */
-            const adjustNumber = function (number) {
+            const doubleToString = function (number) {
                 let stringedNumber = number.toFixed(2);
 
                 while (stringedNumber.endsWith('0'))
@@ -274,7 +274,7 @@
                     const mobileGradeSpan = document.querySelector('th span.grade');
                     const sum = sumGrades();
 
-                    gradeSpan.innerText = adjustNumber(sum);
+                    gradeSpan.innerText = doubleToString(sum);
                     mobileGradeSpan.innerText = gradeSpan.innerText;
                     observer.disconnect();
                     adjustGradeColor(disciplineRow, mobileUpperRow);
@@ -346,28 +346,26 @@
             /**
              * Change written grade field sizes based on the grade ratio.
              *
-             * @param {Element} disciplineRow - the discipline row object
+             * @param {number} gradeRatio - the discipline row object
              */
-            const correctGradeName = function (disciplineRow) {
-                const gradeCell = document.querySelector('td.text-right span.grade');
-                const gradeRatio = getGradeRatio(disciplineRow);
-                const isCredit = document.querySelector('div.list-group-item.ng-binding').innerText.includes('Зачёт');
+            const correctGradeName = function (gradeRatio, controlForm) {
+                const isCredit = controlForm === 'Зачёт';
 
                 if (gradeRatio < 0.5) {
-                    gradeCell.innerText = 'Незачтено';
-                    gradeCell.style = 'width: 75px';
+                    return 'Незачтено';
+                    // gradeCell.style = 'width: 75px';
                 } else if (isCredit) {
-                    gradeCell.innerText = 'Зачтено';
-                    gradeCell.style = 'width: 60px';
+                    return 'Зачтено';
+                    // gradeCell.style = 'width: 60px';
                 } else if (gradeRatio < 0.7) {
-                    gradeCell.innerText = 'Удовлетворительно';
-                    gradeCell.style = 'width: 135px';
+                    return 'Удовлетворительно';
+                    // gradeCell.style = 'width: 135px';
                 } else if (gradeRatio < 0.86) {
-                    gradeCell.innerText = 'Хорошо';
-                    gradeCell.style = 'width: 65px';
+                    return 'Хорошо';
+                    // gradeCell.style = 'width: 65px';
                 } else {
-                    gradeCell.innerText = 'Отлично';
-                    gradeCell.style = 'width: 65px';
+                    return 'Отлично';
+                    // gradeCell.style = 'width: 65px';
                 }
             }
 
@@ -536,6 +534,40 @@
             }
 
 
+            const updateGrades = function () {
+                const source = document.querySelector('#forang');
+                const raw_data = source.textContent;
+                const jsonData = JSON.parse(raw_data);
+                const disciplines = jsonData['dises'];
+
+                for (let i = 0; i < disciplines.length; i++) {
+                    const disciplineName = disciplines[i]['name'];
+                    const controlPoints = disciplines[i]['segments'][0]['allKms'];
+                    const grade = disciplines[i]['grade'];
+                    const controlForm = disciplines[i]['formControl']['name'];
+                    let sum = 0;
+                    let maxPossibleSum = 0;
+
+                    for (let j = 0; j < controlPoints.length; j++) {
+                        const balls = controlPoints[j]['balls'][0];
+
+                        if (balls && balls['ball'] > 0) {
+                            sum += balls['ball'];
+                            maxPossibleSum += controlPoints[j]['max_ball'];
+                        }
+                    }
+
+                    grade['b'] = sum
+                    grade['p'] = doubleToString(sum / maxPossibleSum * 100);
+                    grade['w'] = correctGradeName(sum / maxPossibleSum, controlForm);
+
+                    console.log(disciplineName, sum, 'of', maxPossibleSum, disciplines[i]['grade']);
+                }
+
+                source.textContent = JSON.stringify(jsonData);
+            }
+
+
             /**
              * Executes the necessary actions when the page is opened.
              */
@@ -543,14 +575,16 @@
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setScheduleCSSAndHeader();
+
                 loadDisciplinesGrades();
                 saveGroup();
             };
 
 
-            setTimeout(saveSchedule, 1);
-            setTimeout(onPageOpen, 10);
-            setTimeout(() => observer.observe(targetNode, config), 50);
+            updateGrades();
+            // setTimeout(saveSchedule, 1);
+            // setTimeout(onPageOpen, 10);
+            // setTimeout(() => observer.observe(targetNode, config), 50);
         } else if (document.URL.includes('orioks.miet.ru'))
             changeBodyWidth();
     }
