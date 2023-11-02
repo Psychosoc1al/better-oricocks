@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.2
+// @version      2.5.3
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -190,8 +190,8 @@
 
                 if (gradeRatio < 0.5) {
                     if (gradeRatio < 0.2)
-                        return ['Незачтено', 1];
-                    return ['Незачтено', 2];
+                        return ['Не зачтено', 1];
+                    return ['Не зачтено', 2];
                 } else if (gradeRatio < 0.7)
                     return [isCredit ? 'Зачтено' : 'Удовлетворительно', 3];
                 else if (gradeRatio < 0.86)
@@ -380,15 +380,15 @@
                 const jsonData = JSON.parse(raw_data);
                 const disciplines = jsonData['dises'];
 
-                for (let i = 0; i < disciplines.length; i++) {
-                    const controlPoints = disciplines[i]['segments'][0]['allKms'];
-                    const grade = disciplines[i]['grade'];
-                    const controlForm = disciplines[i]['formControl']['name'];
-                    const maxPossibleSum = disciplines[i]['mvb'];
+                for (const element of disciplines) {
+                    const controlPoints = element['segments'][0]['allKms'];
+                    const grade = element['grade'];
+                    const controlForm = element['formControl']['name'];
+                    const maxPossibleSum = element['mvb'];
                     let sum = 0;
 
-                    for (let j = 0; j < controlPoints.length; j++) {
-                        const balls = controlPoints[j]['balls'][0];
+                    for (const element of controlPoints) {
+                        const balls = element['balls'][0];
 
                         if (balls && balls['ball'] > 0)
                             sum += balls['ball'];
