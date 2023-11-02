@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.1
+// @version      2.5.2
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
+// @license      MIT
 // @namespace    https://github.com/Psychosoc1al
 // @match        https://orioks.miet.ru/*
 // @icon         https://orioks.miet.ru/favicon.ico
@@ -21,7 +22,8 @@
 
 
         /**
-         * Changes the body width to make the interface wider.
+         * Changes the body width to make the interface wider and more readable.
+         * Separate function for convenience to be used on different pages
          */
         const changeBodyWidth = function () {
             for (const sheet of document.styleSheets)
@@ -35,10 +37,10 @@
 
 
         /**
-         * Save a key-value pair in the storage.
+         * Save a key-value pair to the storage
          *
-         * @param {string} key - the key to save
-         * @param {string | Object} value - the value to save
+         * @param {string} key - The key to save
+         * @param {string | Object} value - The value to save
          */
         const saveKeyValue = function (key, value) {
             // noinspection JSUnresolvedReference
@@ -47,10 +49,10 @@
 
 
         /**
-         * Retrieves the value associated with the given key.
+         * Retrieves the value associated with the given key
          *
-         * @param {string} key - The key to retrieve the value for.
-         * @return {Promise<string>} - The value associated with the given key.
+         * @param {string} key - The key to retrieve the value for
+         * @return {Promise<string>} - The value associated with the given key
          */
         const loadValueByKey = function (key) {
             // noinspection JSUnresolvedReference,JSCheckFunctionSignatures
@@ -58,7 +60,9 @@
         }
 
 
+        // check to know if we are on the page with grades
         if (document.URL.includes('student/student')) {
+            const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
             const weeksNumbers = {
                 '1 числитель': 0,
                 '1 знаменатель': 1,
@@ -69,70 +73,51 @@
 
 
             /**
-             * Saves the group value by extracting it from the selected option of a dropdown list.
-             */
-            const saveGroup = function () {
-                const group = document.querySelector('select[name="student_id"] option[selected]').innerText.split(' ')[0];
-                saveKeyValue('group', group);
-            }
-
-
-            /**
-             * Sends a request to the specified URL using the given method and cookie.
+             * Sends a request to the schedule server
              *
-             * @param {string} url - The URL to send the request to.
-             * @param {string} method - The HTTP method to use for the request.
-             * @param {string} [cookie=''] - The cookie to include in the request headers.
-             * @return {Promise<Object>} A promise that resolves with the response text.
+             * @param {string} [cookie=''] - The cookie to include in the request headers
+             * @return {Promise<Object>} A promise that resolves with the response text
              */
-            const sendRequest = function (url, method, cookie = '') {
-                return loadValueByKey('group').then(group => {
-                    const headers = {};
-                    let data = '';
-                    if (url === 'https://miet.ru/schedule/data') {
-                        headers['Content-Type'] = 'application/x-www-form-urlencoded';
-                        headers['Cookie'] = cookie;
-                        data = `group=${group}`;
+            const sendRequest = function (cookie = '') {
+                // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
+                return GM.xmlHttpRequest({
+                    url: 'https://miet.ru/schedule/data',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Cookie': cookie
+                    },
+                    data: `group=${group}`,
+                    onload: function (responsePromise) {
+                        return responsePromise;
+                    },
+                    onerror: function (response) {
+                        console.log(response);
                     }
-
-                    // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
-                    return GM.xmlHttpRequest({
-                        url: url,
-                        method: method,
-                        headers: headers,
-                        data: data,
-                        onload: function (responsePromise) {
-                            return responsePromise;
-                        },
-                        onerror: function (response) {
-                            console.log(response);
-                        }
-                    });
                 });
             };
 
 
             /**
-             * Gets the schedule by sending a request to 'https://miet.ru/schedule/data'.
+             * Gets the schedule by sending a request and passing the protection(?) with setting the cookie
              *
-             * @return {Promise<Object>} A promise that resolves with the response text.
+             * @return {Promise<Object>} A JSON object containing the schedule
              */
             const getSchedule = function () {
-                return sendRequest('https://miet.ru/schedule/data', 'POST')
-                    .then(responseObject => {
-                        const cookie = responseObject.responseText.match(/wl=.*;path=\//);
-                        if (cookie)
-                            return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
-                                .then(responseObject => JSON.parse(responseObject.responseText));
+                return sendRequest().then(responseObject => {
+                    const cookie = responseObject.responseText.match(/wl=.*;path=\//);
+                    if (cookie)
+                        return sendRequest(cookie[0])
+                            .then(responseObject => JSON.parse(responseObject.responseText));
 
-                        return JSON.parse(responseObject.responseText);
-                    });
+                    return JSON.parse(responseObject.responseText);
+                });
             };
 
             /**
-             * Parses the schedule data received from the server.
+             * Parses the schedule data received from the server
              *
-             * @return {Promise<Array<Object>>} An array of parsed schedule elements.
+             * @return {Promise<Array<Object>>} An array of parsed and formatted schedule elements
              */
             const parseSchedule = function () {
                 return getSchedule().then(responseJSON => {
@@ -159,20 +144,22 @@
 
 
             /**
-             * Saves the schedule by parsing it and storing the parsed result.
+             * Updates the schedule and processes it
              */
-            const saveSchedule = function () {
+            const processSchedule = function () {
                 parseSchedule().then(parsedSchedule => {
                     saveKeyValue('schedule', parsedSchedule);
                 })
+
+                // TODO: schedule processing
             };
 
 
             /**
-             * Adjusts a number by removing trailing zeros and the decimal point if necessary.
+             * Adjusts a number to be integer if possible and rounded to at most 2 decimal places if not
              *
-             * @param {number} number - The number to be adjusted.
-             * @return {string} The adjusted number as a string.
+             * @param {number} number - The number to be adjusted
+             * @return {string} The adjusted number as a string
              */
             const numberToFixedString = function (number) {
                 if (!number)
@@ -191,10 +178,10 @@
 
 
             /**
-             * Change written grade field sizes based on the grade ratio.
+             * Gets the grade string representation and its type (projection to five-ball system)
              *
-             * @param {number} gradeRatio - the discipline row object
-             * @param {string} controlForm - the control form
+             * @param {number} gradeRatio - the grade ratio (grade / maxGrade)
+             * @param {string} controlForm - the control type to check if it is a credit
              *
              * @return {[string, number]} The new grade class as a string
              */
@@ -205,18 +192,18 @@
                     if (gradeRatio < 0.2)
                         return ['Незачтено', 1];
                     return ['Незачтено', 2];
-                } else if (gradeRatio < 0.7) {
+                } else if (gradeRatio < 0.7)
                     return [isCredit ? 'Зачтено' : 'Удовлетворительно', 3];
-                } else if (gradeRatio < 0.86) {
+                else if (gradeRatio < 0.86)
                     return [isCredit ? 'Зачтено' : 'Хорошо', 4];
-                } else {
+                else
                     return [isCredit ? 'Зачтено' : 'Отлично', 5];
-                }
+
             }
 
 
             /**
-             * Changes the size of grade fields.
+             * Changes the size of numeric and string grade fields
              */
             const changeGradeFieldsSizes = function () {
                 for (const sheet of document.styleSheets)
@@ -233,6 +220,7 @@
             };
 
 
+            // to be changed or removed
             /**
              * Sets the schedule CSS and header.
              */
@@ -284,6 +272,7 @@
             }
 
 
+            // to be changed or removed
             /**
              * Sets the schedule based on the current time and day or on finds the closest lessons.
              */
@@ -340,6 +329,7 @@
             }
 
 
+            // to be changed or removed
             /**
              * Sets the header for the pre-schedule based on the search day number.
              *
@@ -356,6 +346,7 @@
             }
 
 
+            // to be changed or removed
             /**
              * Appends a new row to the schedule table with the details of the given lesson.
              *
@@ -380,6 +371,9 @@
             }
 
 
+            /**
+             * Updates the grade fields based on the newest data
+             */
             const updateGrades = function () {
                 const source = document.querySelector('#forang');
                 const raw_data = source.textContent;
@@ -415,12 +409,11 @@
              */
             const onPageOpen = function () {
                 updateGrades();
+                processSchedule();
+
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setScheduleCSSAndHeader();
-
-                saveGroup();
-                saveSchedule();
             };
 
 
