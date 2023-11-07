@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.3
+// @version      2.5.4
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -210,7 +210,7 @@
                     if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css'))
                         for (const element of sheet.cssRules) {
                             if (element['selectorText'] === '.w46')
-                                element['style'].width = '33px';
+                                element['style'].width = '34px';
                             if (['.grade', '#bp'].includes(element['selectorText'])) {
                                 element['style'].width = '45px';
                                 element['style'].padding = '3px';
