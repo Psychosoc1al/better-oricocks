@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.9
+// @version      2.5.10
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -101,80 +101,6 @@
 
 
             /**
-             * Gets the schedule by sending a request and passing the protection(?) with setting the cookie
-             *
-             * @return {Promise<Object>} A JSON object containing the schedule
-             */
-            const getSchedule = function () {
-                return sendRequest('https://miet.ru/schedule/data', 'POST')
-                    .then(responseObject => {
-                        const cookie = responseObject.responseText.match(/wl=.*;path=\//);
-                        if (cookie)
-                            return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
-                                .then(responseObject => JSON.parse(responseObject.responseText));
-
-                        return JSON.parse(responseObject.responseText);
-                    });
-            };
-
-            /**
-             * Parses the schedule data received from the server
-             *
-             * @return {Promise<Array<Object>>} An array of parsed and formatted schedule elements
-             */
-            const parseSchedule = function () {
-                return getSchedule().then(responseJSON => {
-                    const parsedSchedule = [];
-
-                    for (const responseJSONElement of responseJSON['Data']) {
-                        const scheduleElement = {}
-
-                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
-                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
-                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
-                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
-                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
-                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
-                        scheduleElement['startTime'] = new Date(responseJSONElement['Time']['TimeFrom'])
-                            .toLocaleTimeString('ru', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        scheduleElement['endTime'] = new Date(responseJSONElement['Time']['TimeTo'])
-                            .toLocaleTimeString('ru', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })
-
-                        parsedSchedule.push(scheduleElement);
-                    }
-
-                    return parsedSchedule;
-                })
-            }
-
-
-            /**
-             * Updates the schedule and processes it
-             */
-            const processSchedule = function () {
-                loadValueByKey('schedule').then(schedule => {
-                    parseSchedule().then(parsedSchedule => {
-                        saveKeyValue('schedule', parsedSchedule);
-                        if (!schedule)
-                            window.location.reload();
-                    });
-
-                    if (schedule) {
-                        const parsedSchedule = JSON.parse(JSON.stringify(schedule));
-                        getClosestLessons(parsedSchedule);
-                        setSchedule();
-                    }
-                });
-            };
-
-
-            /**
              * Adjusts a number to be integer if possible and rounded to at most 2 decimal places if not
              *
              * @param {number} number - The number to be adjusted
@@ -245,9 +171,6 @@
              * Sets the schedule CSS.
              */
             const setScheduleCSS = function () {
-                if (!document.querySelector('.alert.ng-scope i'))
-                    return;
-
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
@@ -260,6 +183,80 @@
                 document.querySelectorAll('tr[ng-repeat="c in data"] span')
                     .forEach(elem => elem.style['white-space'] = 'pre-line');
             }
+
+
+            /**
+             * Gets the schedule by sending a request and passing the protection(?) with setting the cookie
+             *
+             * @return {Promise<Object>} A JSON object containing the schedule
+             */
+            const getSchedule = function () {
+                return sendRequest('https://miet.ru/schedule/data', 'POST')
+                    .then(responseObject => {
+                        const cookie = responseObject.responseText.match(/wl=.*;path=\//);
+                        if (cookie)
+                            return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
+                                .then(responseObject => JSON.parse(responseObject.responseText));
+
+                        return JSON.parse(responseObject.responseText);
+                    });
+            };
+
+            /**
+             * Parses the schedule data received from the server
+             *
+             * @return {Promise<Array<Object>>} An array of parsed and formatted schedule elements
+             */
+            const parseSchedule = function () {
+                return getSchedule().then(responseJSON => {
+                    const parsedSchedule = [];
+
+                    for (const responseJSONElement of responseJSON['Data']) {
+                        const scheduleElement = {}
+
+                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
+                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
+                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
+                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
+                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
+                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
+                        scheduleElement['startTime'] = new Date(responseJSONElement['Time']['TimeFrom'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        scheduleElement['endTime'] = new Date(responseJSONElement['Time']['TimeTo'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })
+
+                        parsedSchedule.push(scheduleElement);
+                    }
+
+                    return parsedSchedule;
+                })
+            }
+
+
+            /**
+             * Updates the schedule and processes it
+             */
+            const processSchedule = function () {
+                loadValueByKey('schedule').then(schedule => {
+                    parseSchedule().then(parsedSchedule => {
+                        saveKeyValue('schedule', parsedSchedule);
+                        if (!schedule)
+                            window.location.reload();
+                    });
+
+                    if (schedule) {
+                        const parsedSchedule = JSON.parse(JSON.stringify(schedule));
+                        const closestLessons = getClosestLessons(parsedSchedule);
+                        setSchedule(closestLessons);
+                    }
+                });
+            };
 
 
             /**
@@ -375,27 +372,41 @@
             }
 
 
-            const setSchedule = function () {
+            const setSchedule = function (closestDays) {
                 const source = document.querySelector('#forang');
                 const jsonData = JSON.parse(source.textContent);
-                const schedule = jsonData['schedule'];
+                const schedule = [];
 
-                for (const element of schedule) {
-                    element[0] = new Date().toLocaleString('ru', {
-                        weekday: 'long',
-                        day: '2-digit',
-                        month: '2-digit'
-                    })
-                    element[1][0] = {
-                        'name': `Конструирование программного обеспечения 
-                        Фёдоров Александр Николаевич
-                        `,
-                        'type': 'qwe',
-                        'location': 'asd',
-                        'time': '09:11'
+                for (let i = 0; i < closestDays.length; i++) {
+                    schedule[i] = [];
+                    schedule[i][0] = closestDays[i].date;
+                    schedule[i][1] = [];
+
+                    for (const lesson of closestDays[i].lessons) {
+                        let lessonName, lessonType;
+                        let lessonTypeMatch = lesson.name.match(/\[(.*)]/);
+
+                        if (lessonTypeMatch) {
+                            lessonName = lesson.name.match(/(.*) \[?/)[1];
+                            lessonType = lessonTypeMatch[1];
+                        }
+                        else {
+                            lessonName = lesson.name;
+                            lessonType = '';
+                        }
+
+                        schedule[i][1].push({
+                            'name': `${lessonName}
+                            ${lesson.teacher}
+                            `,
+                            'type': lessonType,
+                            'location': lesson.room,
+                            'time': lesson.startTime
+                        });
                     }
                 }
 
+                jsonData['schedule'] = schedule;
                 source.textContent = JSON.stringify(jsonData);
             }
 
