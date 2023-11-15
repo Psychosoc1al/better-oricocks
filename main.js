@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.4
+// @version      2.5.5
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -10,6 +10,7 @@
 // @icon         https://orioks.miet.ru/favicon.ico
 // @run-at       document-body
 // @connect      miet.ru
+// @connect      worldtimeapi.org
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -75,14 +76,16 @@
             /**
              * Sends a request to the schedule server
              *
-             * @param {string} [cookie=''] - The cookie to include in the request headers
+             * @param {string} url - The URL to send the request to
+             * @param {string} method - The request method
+             * @param {string} cookie - The cookie to include in the request headers
              * @return {Promise<Object>} A promise that resolves with the response text
              */
-            const sendRequest = function (cookie = '') {
+            const sendRequest = function (url, method, cookie = '') {
                 // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
                 return GM.xmlHttpRequest({
-                    url: 'https://miet.ru/schedule/data',
-                    method: 'POST',
+                    url: url,
+                    method: method,
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'Cookie': cookie
@@ -104,10 +107,10 @@
              * @return {Promise<Object>} A JSON object containing the schedule
              */
             const getSchedule = function () {
-                return sendRequest().then(responseObject => {
+                return sendRequest('https://miet.ru/schedule/data', 'POST').then(responseObject => {
                     const cookie = responseObject.responseText.match(/wl=.*;path=\//);
                     if (cookie)
-                        return sendRequest(cookie[0])
+                        return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
                             .then(responseObject => JSON.parse(responseObject.responseText));
 
                     return JSON.parse(responseObject.responseText);
@@ -122,7 +125,6 @@
             const parseSchedule = function () {
                 return getSchedule().then(responseJSON => {
                     const parsedSchedule = [];
-                    const regExp = RegExp(/\d{2}:\d{2}/);
 
                     for (const responseJSONElement of responseJSON['Data']) {
                         const scheduleElement = {}
@@ -133,11 +135,20 @@
                         scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
                         scheduleElement['room'] = responseJSONElement['Room']['Name'];
                         scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
-                        scheduleElement['startTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeFrom']).toString())[0];
-                        scheduleElement['endTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeTo']).toString())[0];
+                        scheduleElement['startTime'] = new Date(
+                            responseJSONElement['Time']['TimeFrom']).toLocaleTimeString('ru', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        scheduleElement['endTime'] = new Date(
+                            responseJSONElement['Time']['TimeTo']).toLocaleTimeString('ru', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })
 
                         parsedSchedule.push(scheduleElement);
                     }
+
                     return parsedSchedule;
                 })
             }
@@ -416,6 +427,10 @@
                 setScheduleCSSAndHeader();
             };
 
+            sendRequest('https://worldtimeapi.org/api/timezone/Europe/Moscow', 'GET')
+                .then(response => {
+                    console.log(JSON.stringify(JSON.parse(response.responseText), null, 2));
+                })
 
             onPageOpen();
         } else if (document.URL.includes('orioks.miet.ru'))
