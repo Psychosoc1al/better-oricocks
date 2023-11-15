@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.7
+// @version      2.5.8
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -70,7 +70,6 @@
                 '2 числитель': 2,
                 '2 знаменатель': 3
             };
-            let scheduleTable;
 
 
             /**
@@ -224,7 +223,7 @@
              */
             const changeGradeFieldsSizes = function () {
                 for (const sheet of document.styleSheets)
-                    if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css'))
+                    if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css')) {
                         for (const element of sheet.cssRules) {
                             if (element['selectorText'] === '.w46')
                                 element['style'].width = '34px';
@@ -233,59 +232,30 @@
                                 element['style'].padding = '3px';
                             }
                         }
+                        break;
+                    }
                 document.querySelector('span[style="width: 60px"]').style.width = 'fit-content';
             };
 
 
-            // to be changed or removed
             /**
-             * Sets the schedule CSS and header.
+             * Sets the schedule CSS.
              */
-            const setScheduleCSSAndHeader = function () {
+            const setScheduleCSS = function () {
                 if (!document.querySelector('.alert.ng-scope i'))
                     return;
 
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
-                            if (element.cssText.startsWith('.alert {') && element.style['padding']) {
-                                element.style['padding'] = '0';
-                                element.style['margin-bottom'] = '0';
+                            if (element.cssText.startsWith('.table') && element.style && element.style['margin-bottom']) {
+                                element.style['margin-top'] = '5px'
                             }
                         break;
                     }
 
-                const scheduleTableBlank = document.createElement("table")
-                scheduleTableBlank.innerHTML = `
-                    <table>
-                      <tr>
-                        <th style="width: 20%">Номер</th>
-                        <th>Предмет, преподаватель</th>
-                        <th style="padding: 3px">Аудитория</th>
-                        <th style="padding: 3px">Время</th>
-                      </tr>
-                    </table>`;
-
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    div.alert.ng-scope table,
-                    div.alert.ng-scope table tr,
-                    div.alert.ng-scope table th,
-                    div.alert.ng-scope table td {
-                      border: 1px solid black;
-                      border-collapse: collapse;
-                      width: 100%;
-                      text-align: center;
-                      padding: 5px;
-                    }`;
-
-                document.querySelector('.col-md-4 .well h4').style['margin-left'] = '5px'
-                document.querySelectorAll('.col-md-4 .well')[1].style['padding-left'] = '5px';
-                document.querySelectorAll('.col-md-4 .well')[1].style['padding-right'] = '5px';
-                document.querySelector('.alert.ng-scope i').remove();
-                document.querySelector('.alert.ng-scope').append(scheduleTableBlank, style);
-                scheduleTable = document.querySelector('.alert.ng-scope tbody');
-                setSchedule();
+                document.querySelectorAll('tr[ng-repeat="c in data"] span')
+                    .forEach(elem => elem.style['white-space'] = 'pre-line');
             }
 
 
@@ -359,48 +329,6 @@
             }
 
 
-            // to be changed or removed
-            /**
-             * Sets the header for the pre-schedule based on the search day number.
-             *
-             * @param {number} searchDayNumber - The number of the search day.
-             * @param {boolean} hasSchedule - Optional. Indicates if there is a schedule for week. Default is true.
-             */
-            const setPreScheduleHeader = function (searchDayNumber, hasSchedule = true) {
-                const preScheduleHeader = document.querySelector('h4 b');
-                if (!hasSchedule)
-                    preScheduleHeader.innerText = 'Расписания не привезли';
-                else
-                    preScheduleHeader.innerText += ', ' +
-                        new Date('2018-01-0' + searchDayNumber).toLocaleDateString('ru', {weekday: 'long'});
-            }
-
-
-            // to be changed or removed
-            /**
-             * Appends a new row to the schedule table with the details of the given lesson.
-             *
-             * @param {object} lesson - The lesson object containing the lesson details.
-             */
-            const appendScheduleTableRow = function (lesson) {
-                const newRow = document.createElement('tr');
-                let startTime = lesson.startTime.match(/\d{2}:\d{2}/)[0];
-                let endTime = lesson.endTime.match(/\d{2}:\d{2}/)[0];
-                if (startTime === "12:00")
-                    startTime += "/30";
-                if (endTime === "13:20")
-                    endTime += "/50";
-
-                newRow.innerHTML = `
-                    <td style="width: 20%">${lesson.lessonNumber}</td>
-                    <td>${lesson.name} <br/> ~ <br/> ${lesson.teacher}</td>
-                    <td>${lesson.room}</td>
-                    <td>${startTime} <br/>-<br/> ${endTime}</td>`;
-
-                scheduleTable.appendChild(newRow);
-            }
-
-
             /**
              * Updates the grade fields based on the newest data
              */
@@ -467,6 +395,7 @@
 
                 changeGradeFieldsSizes();
                 changeBodyWidth();
+                setScheduleCSS();
                 setSchedule();
             };
 
