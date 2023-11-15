@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.5
+// @version      2.5.7
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -159,10 +159,16 @@
              * Updates the schedule and processes it
              */
             const processSchedule = function () {
-                parseSchedule().then(parsedSchedule => {
-                    saveKeyValue('schedule', parsedSchedule);
-                })
+                loadValueByKey('schedule').then(schedule => {
+                    parseSchedule().then(parsedSchedule => {
+                        saveKeyValue('schedule', parsedSchedule);
+                        if (!schedule)
+                            window.location.reload();
+                    });
 
+                    if (schedule)
+                        console.log(getClosestLessons(JSON.parse(JSON.stringify(schedule))));
+                });
             };
 
 
@@ -283,14 +289,14 @@
             }
 
 
-            // to be changed or removed
             /**
              * Sets the schedule based on the current time and day or on finds the closest lessons
              *
+             * @param {Object} schedule - The whole schedule object
              * @param {number} daysOffset - The offset in days from the current day to start search
-             * @return {Promise<Object[]>} The closest two days lessons list
+             * @return {Object[]} The closest two days lessons list
              */
-            const getClosestLessons = function (daysOffset = 0) {
+            const getClosestLessons = function (schedule, daysOffset = 0) {
                 let currentTime, currentDayNumber;
 
                 if (!daysOffset) {
@@ -317,44 +323,39 @@
                 let closestLessons = [];
                 let nextOffset = daysOffset;
 
-                if (typeof searchWeekNumber === 'undefined') {
-                    return Promise.resolve([]);
-                }
+                if (typeof searchWeekNumber === 'undefined')
+                    return [];
+
 
                 if (currentDayNumber === 0) {
                     searchWeekNumber = ++searchWeekNumber % 4;
                     searchDayNumber = 0;
                 }
 
-                return loadValueByKey('schedule').then(schedule => {
-                    schedule = JSON.parse(JSON.stringify(schedule));
 
-                    while (!closestLessons.length) {
-                        searchDayNumber = ++searchDayNumber % 7;
-                        nextOffset++;
-                        if (searchDayNumber === 0) {
-                            searchWeekNumber = ++searchWeekNumber % 4;
-                            searchDayNumber = 1;
-                        }
-
-                        closestLessons = schedule.filter(lesson =>
-                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
-                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
-                            !lesson.teacher.includes('УВЦ')
-                        )
+                while (!closestLessons.length) {
+                    searchDayNumber = ++searchDayNumber % 7;
+                    nextOffset++;
+                    if (searchDayNumber === 0) {
+                        searchWeekNumber = ++searchWeekNumber % 4;
+                        searchDayNumber = 1;
                     }
 
-                    closestLessons.sort((a, b) => {
-                        return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
-                    })
+                    closestLessons = schedule.filter(lesson =>
+                        lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
+                        (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
+                        !lesson.teacher.includes('УВЦ')
+                    )
+                }
 
-
-                    // console.log(closestLessons);
-                    if (!daysOffset)
-                        return getClosestLessons(nextOffset)
-                            .then(secondClosestLessons => [closestLessons, secondClosestLessons])
-                    return closestLessons;
+                closestLessons.sort((a, b) => {
+                    return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
                 })
+
+
+                if (!daysOffset)
+                    return [closestLessons, getClosestLessons(schedule, nextOffset)];
+                return closestLessons;
             }
 
 
@@ -467,9 +468,6 @@
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setSchedule();
-                getClosestLessons().then(
-                    result => console.log(result)
-                )
             };
 
 
