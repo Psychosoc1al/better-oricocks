@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.8
+// @version      2.5.9
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -165,8 +165,11 @@
                             window.location.reload();
                     });
 
-                    if (schedule)
-                        console.log(getClosestLessons(JSON.parse(JSON.stringify(schedule))));
+                    if (schedule) {
+                        const parsedSchedule = JSON.parse(JSON.stringify(schedule));
+                        getClosestLessons(parsedSchedule);
+                        setSchedule();
+                    }
                 });
             };
 
@@ -268,17 +271,17 @@
              */
             const getClosestLessons = function (schedule, daysOffset = 0) {
                 let currentTime, currentDayNumber;
+                let date = new Date();
 
-                if (!daysOffset) {
-                    currentTime = new Date()
+                if (daysOffset === 0) {
+                    currentTime = date
                         .toLocaleTimeString('ru', {
                             timeZone: 'Europe/Moscow',
                             hour: '2-digit',
                             minute: '2-digit'
                         });
-                    currentDayNumber = new Date().getDay();
+                    currentDayNumber = date.getDay();
                 } else {
-                    const date = new Date();
                     date.setDate(date.getDate() + daysOffset);
 
                     currentTime = '00:00';
@@ -296,12 +299,10 @@
                 if (typeof searchWeekNumber === 'undefined')
                     return [];
 
-
                 if (currentDayNumber === 0) {
                     searchWeekNumber = ++searchWeekNumber % 4;
                     searchDayNumber = 0;
                 }
-
 
                 while (!closestLessons.length) {
                     searchDayNumber = ++searchDayNumber % 7;
@@ -322,10 +323,23 @@
                     return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
                 })
 
+                date = new Date();
+                date.setDate(date.getDate() + nextOffset);
+                const stringDate = date.toLocaleDateString('ru', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit'
+                })
 
-                if (!daysOffset)
-                    return [closestLessons, getClosestLessons(schedule, nextOffset)];
-                return closestLessons;
+                if (daysOffset === 0)
+                    return [{
+                        date: stringDate,
+                        lessons: closestLessons
+                    }].concat(getClosestLessons(schedule, nextOffset));
+                return [{
+                    date: stringDate,
+                    lessons: closestLessons
+                }];
             }
 
 
@@ -396,7 +410,6 @@
                 changeGradeFieldsSizes();
                 changeBodyWidth();
                 setScheduleCSS();
-                setSchedule();
             };
 
 
