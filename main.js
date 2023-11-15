@@ -107,14 +107,15 @@
              * @return {Promise<Object>} A JSON object containing the schedule
              */
             const getSchedule = function () {
-                return sendRequest('https://miet.ru/schedule/data', 'POST').then(responseObject => {
-                    const cookie = responseObject.responseText.match(/wl=.*;path=\//);
-                    if (cookie)
-                        return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
-                            .then(responseObject => JSON.parse(responseObject.responseText));
+                return sendRequest('https://miet.ru/schedule/data', 'POST')
+                    .then(responseObject => {
+                        const cookie = responseObject.responseText.match(/wl=.*;path=\//);
+                        if (cookie)
+                            return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
+                                .then(responseObject => JSON.parse(responseObject.responseText));
 
-                    return JSON.parse(responseObject.responseText);
-                });
+                        return JSON.parse(responseObject.responseText);
+                    });
             };
 
             /**
@@ -135,16 +136,16 @@
                         scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
                         scheduleElement['room'] = responseJSONElement['Room']['Name'];
                         scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
-                        scheduleElement['startTime'] = new Date(
-                            responseJSONElement['Time']['TimeFrom']).toLocaleTimeString('ru', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                        scheduleElement['endTime'] = new Date(
-                            responseJSONElement['Time']['TimeTo']).toLocaleTimeString('ru', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })
+                        scheduleElement['startTime'] = new Date(responseJSONElement['Time']['TimeFrom'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        scheduleElement['endTime'] = new Date(responseJSONElement['Time']['TimeTo'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })
 
                         parsedSchedule.push(scheduleElement);
                     }
@@ -162,7 +163,6 @@
                     saveKeyValue('schedule', parsedSchedule);
                 })
 
-                // TODO: schedule processing
             };
 
 
@@ -285,41 +285,55 @@
 
             // to be changed or removed
             /**
-             * Sets the schedule based on the current time and day or on finds the closest lessons.
+             * Sets the schedule based on the current time and day or on finds the closest lessons
+             *
+             * @param {number} daysOffset - The offset in days from the current day to start search
+             * @return {Promise<Object[]>} The closest two days lessons list
              */
-            const setSchedule = function () {
-                const currentTime = RegExp(/\d{2}:\d{2}/).exec(
-                    new Date().toLocaleTimeString('ru', {
-                        timeZone: 'Europe/Moscow',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })
-                )[0];
+            const getClosestLessons = function (daysOffset = 0) {
+                let currentTime, currentDayNumber;
+
+                if (!daysOffset) {
+                    currentTime = new Date()
+                        .toLocaleTimeString('ru', {
+                            timeZone: 'Europe/Moscow',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    currentDayNumber = new Date().getDay();
+                } else {
+                    const date = new Date();
+                    date.setDate(date.getDate() + daysOffset);
+
+                    currentTime = '00:00';
+                    currentDayNumber = date.getDay();
+                }
+
                 let stringCurrentWeek = document.querySelector('.small').innerText.split('\n')[1];
                 if (!stringCurrentWeek)
                     stringCurrentWeek = document.querySelector('.small').innerText.split(' ').slice(3).join(' ')
                 let searchWeekNumber = weeksNumbers[stringCurrentWeek];
-                let currentDayNumber = new Date().getDay();
-                let searchDayNumber = currentDayNumber - 1;
+                let searchDayNumber = currentDayNumber--;
                 let closestLessons = [];
+                let nextOffset = daysOffset;
 
                 if (typeof searchWeekNumber === 'undefined') {
-                    setPreScheduleHeader(currentDayNumber, false);
-                    return;
+                    return Promise.resolve([]);
                 }
 
                 if (currentDayNumber === 0) {
-                    searchWeekNumber = (searchWeekNumber + 1) % 4;
+                    searchWeekNumber = ++searchWeekNumber % 4;
                     searchDayNumber = 0;
                 }
 
-                loadValueByKey('schedule').then(schedule => {
+                return loadValueByKey('schedule').then(schedule => {
                     schedule = JSON.parse(JSON.stringify(schedule));
 
                     while (!closestLessons.length) {
-                        searchDayNumber = (searchDayNumber + 1) % 7;
+                        searchDayNumber = ++searchDayNumber % 7;
+                        nextOffset++;
                         if (searchDayNumber === 0) {
-                            searchWeekNumber = (searchWeekNumber + 1) % 4;
+                            searchWeekNumber = ++searchWeekNumber % 4;
                             searchDayNumber = 1;
                         }
 
@@ -334,8 +348,12 @@
                         return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
                     })
 
-                    closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
-                    setPreScheduleHeader(searchDayNumber);
+
+                    // console.log(closestLessons);
+                    if (!daysOffset)
+                        return getClosestLessons(nextOffset)
+                            .then(secondClosestLessons => [closestLessons, secondClosestLessons])
+                    return closestLessons;
                 })
             }
 
@@ -387,8 +405,7 @@
              */
             const updateGrades = function () {
                 const source = document.querySelector('#forang');
-                const raw_data = source.textContent;
-                const jsonData = JSON.parse(raw_data);
+                const jsonData = JSON.parse(source.textContent);
                 const disciplines = jsonData['dises'];
 
                 for (const element of disciplines) {
@@ -415,6 +432,31 @@
             }
 
 
+            const setSchedule = function () {
+                const source = document.querySelector('#forang');
+                const jsonData = JSON.parse(source.textContent);
+                const schedule = jsonData['schedule'];
+
+                for (const element of schedule) {
+                    element[0] = new Date().toLocaleString('ru', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: '2-digit'
+                    })
+                    element[1][0] = {
+                        'name': `Конструирование программного обеспечения 
+                        Фёдоров Александр Николаевич
+                        `,
+                        'type': 'qwe',
+                        'location': 'asd',
+                        'time': '09:11'
+                    }
+                }
+
+                source.textContent = JSON.stringify(jsonData);
+            }
+
+
             /**
              * Executes the necessary actions when the page is opened.
              */
@@ -424,13 +466,12 @@
 
                 changeGradeFieldsSizes();
                 changeBodyWidth();
-                setScheduleCSSAndHeader();
+                setSchedule();
+                getClosestLessons().then(
+                    result => console.log(result)
+                )
             };
 
-            sendRequest('https://worldtimeapi.org/api/timezone/Europe/Moscow', 'GET')
-                .then(response => {
-                    console.log(JSON.stringify(JSON.parse(response.responseText), null, 2));
-                })
 
             onPageOpen();
         } else if (document.URL.includes('orioks.miet.ru'))
