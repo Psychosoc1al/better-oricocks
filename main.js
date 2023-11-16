@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.4
+// @version      3.0
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -10,6 +10,7 @@
 // @icon         https://orioks.miet.ru/favicon.ico
 // @run-at       document-body
 // @connect      miet.ru
+// @connect      worldtimeapi.org
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -69,20 +70,21 @@
                 '2 числитель': 2,
                 '2 знаменатель': 3
             };
-            let scheduleTable;
 
 
             /**
              * Sends a request to the schedule server
              *
-             * @param {string} [cookie=''] - The cookie to include in the request headers
+             * @param {string} url - The URL to send the request to
+             * @param {string} method - The request method
+             * @param {string} cookie - The cookie to include in the request headers
              * @return {Promise<Object>} A promise that resolves with the response text
              */
-            const sendRequest = function (cookie = '') {
+            const sendRequest = function (url, method, cookie = '') {
                 // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
                 return GM.xmlHttpRequest({
-                    url: 'https://miet.ru/schedule/data',
-                    method: 'POST',
+                    url: url,
+                    method: method,
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'Cookie': cookie
@@ -95,63 +97,6 @@
                         console.log(response);
                     }
                 });
-            };
-
-
-            /**
-             * Gets the schedule by sending a request and passing the protection(?) with setting the cookie
-             *
-             * @return {Promise<Object>} A JSON object containing the schedule
-             */
-            const getSchedule = function () {
-                return sendRequest().then(responseObject => {
-                    const cookie = responseObject.responseText.match(/wl=.*;path=\//);
-                    if (cookie)
-                        return sendRequest(cookie[0])
-                            .then(responseObject => JSON.parse(responseObject.responseText));
-
-                    return JSON.parse(responseObject.responseText);
-                });
-            };
-
-            /**
-             * Parses the schedule data received from the server
-             *
-             * @return {Promise<Array<Object>>} An array of parsed and formatted schedule elements
-             */
-            const parseSchedule = function () {
-                return getSchedule().then(responseJSON => {
-                    const parsedSchedule = [];
-                    const regExp = RegExp(/\d{2}:\d{2}/);
-
-                    for (const responseJSONElement of responseJSON['Data']) {
-                        const scheduleElement = {}
-
-                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
-                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
-                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
-                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
-                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
-                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
-                        scheduleElement['startTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeFrom']).toString())[0];
-                        scheduleElement['endTime'] = regExp.exec(new Date(responseJSONElement['Time']['TimeTo']).toString())[0];
-
-                        parsedSchedule.push(scheduleElement);
-                    }
-                    return parsedSchedule;
-                })
-            }
-
-
-            /**
-             * Updates the schedule and processes it
-             */
-            const processSchedule = function () {
-                parseSchedule().then(parsedSchedule => {
-                    saveKeyValue('schedule', parsedSchedule);
-                })
-
-                // TODO: schedule processing
             };
 
 
@@ -207,7 +152,7 @@
              */
             const changeGradeFieldsSizes = function () {
                 for (const sheet of document.styleSheets)
-                    if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css'))
+                    if (sheet.href?.includes('https://orioks.miet.ru/controller/student/student.css')) {
                         for (const element of sheet.cssRules) {
                             if (element['selectorText'] === '.w46')
                                 element['style'].width = '34px';
@@ -216,158 +161,182 @@
                                 element['style'].padding = '3px';
                             }
                         }
+                        break;
+                    }
                 document.querySelector('span[style="width: 60px"]').style.width = 'fit-content';
             };
 
 
-            // to be changed or removed
             /**
-             * Sets the schedule CSS and header.
+             * Sets the schedule CSS.
              */
-            const setScheduleCSSAndHeader = function () {
-                if (!document.querySelector('.alert.ng-scope i'))
-                    return;
-
+            const setScheduleCSS = function () {
                 for (const sheet of document.styleSheets)
                     if (sheet.href?.includes('https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css')) {
                         for (const element of sheet.cssRules)
-                            if (element.cssText.startsWith('.alert {') && element.style['padding']) {
-                                element.style['padding'] = '0';
-                                element.style['margin-bottom'] = '0';
+                            if (element.cssText.startsWith('.table') && element.style && element.style['margin-bottom']) {
+                                element.style['margin-top'] = '5px'
                             }
                         break;
                     }
 
-                const scheduleTableBlank = document.createElement("table")
-                scheduleTableBlank.innerHTML = `
-                    <table>
-                      <tr>
-                        <th style="width: 20%">Номер</th>
-                        <th>Предмет, преподаватель</th>
-                        <th style="padding: 3px">Аудитория</th>
-                        <th style="padding: 3px">Время</th>
-                      </tr>
-                    </table>`;
-
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    div.alert.ng-scope table,
-                    div.alert.ng-scope table tr,
-                    div.alert.ng-scope table th,
-                    div.alert.ng-scope table td {
-                      border: 1px solid black;
-                      border-collapse: collapse;
-                      width: 100%;
-                      text-align: center;
-                      padding: 5px;
-                    }`;
-
-                document.querySelector('.col-md-4 .well h4').style['margin-left'] = '5px'
-                document.querySelectorAll('.col-md-4 .well')[1].style['padding-left'] = '5px';
-                document.querySelectorAll('.col-md-4 .well')[1].style['padding-right'] = '5px';
-                document.querySelector('.alert.ng-scope i').remove();
-                document.querySelector('.alert.ng-scope').append(scheduleTableBlank, style);
-                scheduleTable = document.querySelector('.alert.ng-scope tbody');
-                setSchedule();
+                document.querySelectorAll('tr[ng-repeat="c in data"] span')
+                    .forEach(elem => elem.style['white-space'] = 'pre-line');
             }
 
 
-            // to be changed or removed
             /**
-             * Sets the schedule based on the current time and day or on finds the closest lessons.
+             * Gets the schedule by sending a request and passing the protection(?) with setting the cookie
+             *
+             * @return {Promise<Object>} A JSON object containing the schedule
              */
-            const setSchedule = function () {
-                const currentTime = RegExp(/\d{2}:\d{2}/).exec(
-                    new Date().toLocaleTimeString('ru', {
-                        timeZone: 'Europe/Moscow',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })
-                )[0];
-                let stringCurrentWeek = document.querySelector('.small').innerText.split('\n')[1];
-                if (!stringCurrentWeek)
-                    stringCurrentWeek = document.querySelector('.small').innerText.split(' ').slice(3).join(' ')
-                let searchWeekNumber = weeksNumbers[stringCurrentWeek];
-                let currentDayNumber = new Date().getDay();
-                let searchDayNumber = currentDayNumber - 1;
-                let closestLessons = [];
+            const getSchedule = function () {
+                return sendRequest('https://miet.ru/schedule/data', 'POST')
+                    .then(responseObject => {
+                        const cookie = responseObject.responseText.match(/wl=.*;path=\//);
+                        if (cookie)
+                            return sendRequest('https://miet.ru/schedule/data', 'POST', cookie[0])
+                                .then(responseObject => JSON.parse(responseObject.responseText));
 
-                if (typeof searchWeekNumber === 'undefined') {
-                    setPreScheduleHeader(currentDayNumber, false);
-                    return;
-                }
+                        return JSON.parse(responseObject.responseText);
+                    });
+            };
 
-                if (currentDayNumber === 0) {
-                    searchWeekNumber = (searchWeekNumber + 1) % 4;
-                    searchDayNumber = 0;
-                }
+            /**
+             * Parses the schedule data received from the server
+             *
+             * @return {Promise<Array<Object>>} An array of parsed and formatted schedule elements
+             */
+            const parseSchedule = function () {
+                return getSchedule().then(responseJSON => {
+                    const parsedSchedule = [];
 
-                loadValueByKey('schedule').then(schedule => {
-                    schedule = JSON.parse(JSON.stringify(schedule));
+                    for (const responseJSONElement of responseJSON['Data']) {
+                        const scheduleElement = {}
 
-                    while (!closestLessons.length) {
-                        searchDayNumber = (searchDayNumber + 1) % 7;
-                        if (searchDayNumber === 0) {
-                            searchWeekNumber = (searchWeekNumber + 1) % 4;
-                            searchDayNumber = 1;
-                        }
+                        scheduleElement['name'] = responseJSONElement['Class']['Name'];
+                        scheduleElement['teacher'] = responseJSONElement['Class']['TeacherFull'];
+                        scheduleElement['dayNumber'] = responseJSONElement['Day'];
+                        scheduleElement['weekNumber'] = responseJSONElement['DayNumber'];
+                        scheduleElement['room'] = responseJSONElement['Room']['Name'];
+                        scheduleElement['lessonNumber'] = responseJSONElement['Time']['Time'];
+                        scheduleElement['startTime'] = new Date(responseJSONElement['Time']['TimeFrom'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        scheduleElement['endTime'] = new Date(responseJSONElement['Time']['TimeTo'])
+                            .toLocaleTimeString('ru', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })
 
-                        closestLessons = schedule.filter(lesson =>
-                            lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
-                            (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
-                            !lesson.teacher.includes('УВЦ')
-                        )
+                        parsedSchedule.push(scheduleElement);
                     }
 
-                    closestLessons.sort((a, b) => {
-                        return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
-                    })
-
-                    closestLessons.forEach(lesson => appendScheduleTableRow(lesson));
-                    setPreScheduleHeader(searchDayNumber);
+                    return parsedSchedule;
                 })
             }
 
 
-            // to be changed or removed
             /**
-             * Sets the header for the pre-schedule based on the search day number.
-             *
-             * @param {number} searchDayNumber - The number of the search day.
-             * @param {boolean} hasSchedule - Optional. Indicates if there is a schedule for week. Default is true.
+             * Updates the schedule and processes it
              */
-            const setPreScheduleHeader = function (searchDayNumber, hasSchedule = true) {
-                const preScheduleHeader = document.querySelector('h4 b');
-                if (!hasSchedule)
-                    preScheduleHeader.innerText = 'Расписания не привезли';
-                else
-                    preScheduleHeader.innerText += ', ' +
-                        new Date('2018-01-0' + searchDayNumber).toLocaleDateString('ru', {weekday: 'long'});
-            }
+            const processSchedule = function () {
+                loadValueByKey('schedule').then(schedule => {
+                    parseSchedule().then(parsedSchedule => {
+                        saveKeyValue('schedule', parsedSchedule);
+                        if (!schedule)
+                            window.location.reload();
+                    });
+
+                    if (schedule) {
+                        const parsedSchedule = JSON.parse(JSON.stringify(schedule));
+                        const closestLessons = getClosestLessons(parsedSchedule);
+                        setSchedule(closestLessons);
+                    }
+                });
+            };
 
 
-            // to be changed or removed
             /**
-             * Appends a new row to the schedule table with the details of the given lesson.
+             * Sets the schedule based on the current time and day or on finds the closest lessons
              *
-             * @param {object} lesson - The lesson object containing the lesson details.
+             * @param {Object} schedule - The whole schedule object
+             * @param {number} daysOffset - The offset in days from the current day to start search
+             * @return {Object[]} The closest two days lessons list
              */
-            const appendScheduleTableRow = function (lesson) {
-                const newRow = document.createElement('tr');
-                let startTime = lesson.startTime.match(/\d{2}:\d{2}/)[0];
-                let endTime = lesson.endTime.match(/\d{2}:\d{2}/)[0];
-                if (startTime === "12:00")
-                    startTime += "/30";
-                if (endTime === "13:20")
-                    endTime += "/50";
+            const getClosestLessons = function (schedule, daysOffset = 0) {
+                let currentTime, currentDayNumber;
+                let date = new Date();
 
-                newRow.innerHTML = `
-                    <td style="width: 20%">${lesson.lessonNumber}</td>
-                    <td>${lesson.name} <br/> ~ <br/> ${lesson.teacher}</td>
-                    <td>${lesson.room}</td>
-                    <td>${startTime} <br/>-<br/> ${endTime}</td>`;
+                if (daysOffset === 0) {
+                    currentTime = date
+                        .toLocaleTimeString('ru', {
+                            timeZone: 'Europe/Moscow',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    currentDayNumber = date.getDay();
+                } else {
+                    date.setDate(date.getDate() + daysOffset);
 
-                scheduleTable.appendChild(newRow);
+                    currentTime = '00:00';
+                    currentDayNumber = date.getDay();
+                }
+
+                let stringCurrentWeek = document.querySelector('.small').innerText.split('\n')[1];
+                if (!stringCurrentWeek)
+                    stringCurrentWeek = document.querySelector('.small').innerText.split(' ').slice(3).join(' ')
+                let searchWeekNumber = weeksNumbers[stringCurrentWeek];
+                let searchDayNumber = currentDayNumber--;
+                let closestLessons = [];
+                let nextOffset = daysOffset;
+
+                if (typeof searchWeekNumber === 'undefined')
+                    return [];
+
+                if (currentDayNumber === 0) {
+                    searchWeekNumber = ++searchWeekNumber % 4;
+                    searchDayNumber = 0;
+                }
+
+                while (!closestLessons.length) {
+                    searchDayNumber = ++searchDayNumber % 7;
+                    nextOffset++;
+                    if (searchDayNumber === 0) {
+                        searchWeekNumber = ++searchWeekNumber % 4;
+                        searchDayNumber = 1;
+                    }
+
+                    closestLessons = schedule.filter(lesson =>
+                        lesson.dayNumber === searchDayNumber && lesson.weekNumber === searchWeekNumber &&
+                        (currentDayNumber === searchDayNumber ? lesson.endTime >= currentTime : true) &&
+                        !lesson.teacher.includes('УВЦ')
+                    )
+                }
+
+                closestLessons.sort((a, b) => {
+                    return (a.lessonNumber > b.lessonNumber) ? 1 : -1;
+                })
+
+                date = new Date();
+                date.setDate(date.getDate() + nextOffset);
+                const stringDate = date.toLocaleDateString('ru', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit'
+                })
+
+                if (daysOffset === 0)
+                    return [{
+                        date: stringDate,
+                        lessons: closestLessons
+                    }].concat(getClosestLessons(schedule, nextOffset));
+                return [{
+                    date: stringDate,
+                    lessons: closestLessons
+                }];
             }
 
 
@@ -376,8 +345,7 @@
              */
             const updateGrades = function () {
                 const source = document.querySelector('#forang');
-                const raw_data = source.textContent;
-                const jsonData = JSON.parse(raw_data);
+                const jsonData = JSON.parse(source.textContent);
                 const disciplines = jsonData['dises'];
 
                 for (const element of disciplines) {
@@ -405,6 +373,91 @@
 
 
             /**
+             * Collapses multiplied lessons with the same name into one
+             *
+             * @param closestDays - The list of closest days with lessons (see {@link getClosestLessons()})
+             * @return {Object[]} The list of closest days with refactored lessons
+             */
+            const collapseDuplicatedLessons = function (closestDays) {
+                for (const day of closestDays) {
+                    const collapsedLessons = [];
+                    let currentLesson;
+                    let currentLessonNumber = 0;
+                    let lessonCount = 1;
+
+                    for (let i = 0; i < day.lessons.length; i++)
+                        if (day.lessons[i].name === day.lessons[i + 1]?.name)
+                            lessonCount++;
+                        else {
+                            if (lessonCount > 1) {
+                                currentLesson = day.lessons[currentLessonNumber];
+                                let name = currentLesson.name;
+                                let amountPart = `(${lessonCount} пар${lessonCount < 5 ? 'ы' : ''})`;
+                                name.indexOf('[') !== -1 ?
+                                    name = name.replace('[', amountPart + ' [') :
+                                    name += amountPart;
+
+                                currentLesson.name = name;
+                                collapsedLessons.push(currentLesson);
+                            } else
+                                collapsedLessons.push(day.lessons[currentLessonNumber]);
+
+                            currentLessonNumber += lessonCount;
+                            lessonCount = 1;
+                        }
+
+                        day.lessons = collapsedLessons;
+                }
+
+                return closestDays;
+            }
+
+
+            /**
+             * Sets the schedule based on the closest lessons
+             *
+             * @param closestDays - The list of closest days with lessons (see {@link getClosestLessons()})
+             */
+            const setSchedule = function (closestDays) {
+                const source = document.querySelector('#forang');
+                const jsonData = JSON.parse(source.textContent);
+                const schedule = [];
+
+                closestDays = collapseDuplicatedLessons(closestDays);
+                for (let i = 0; i < closestDays.length; i++) {
+                    schedule[i] = [];
+                    schedule[i][0] = closestDays[i].date;
+                    schedule[i][1] = [];
+
+                    for (const lesson of closestDays[i].lessons) {
+                        let lessonName, lessonType;
+                        let lessonTypeMatch = lesson.name.match(/\[(.*)]/);
+
+                        if (lessonTypeMatch) {
+                            lessonName = lesson.name.match(/(.*) \[?/)[1];
+                            lessonType = lessonTypeMatch[1];
+                        } else {
+                            lessonName = lesson.name;
+                            lessonType = '';
+                        }
+
+                        schedule[i][1].push({
+                            'name': `${lessonName}
+                            ► ${lesson.teacher}
+                            `,
+                            'type': lessonType,
+                            'location': lesson.room,
+                            'time': lesson.startTime === '12:00' ? '12:00/30' : lesson.startTime
+                        });
+                    }
+                }
+
+                jsonData['schedule'] = schedule;
+                source.textContent = JSON.stringify(jsonData);
+            }
+
+
+            /**
              * Executes the necessary actions when the page is opened.
              */
             const onPageOpen = function () {
@@ -413,7 +466,7 @@
 
                 changeGradeFieldsSizes();
                 changeBodyWidth();
-                setScheduleCSSAndHeader();
+                setScheduleCSS();
             };
 
 
