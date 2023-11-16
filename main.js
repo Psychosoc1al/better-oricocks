@@ -288,7 +288,7 @@
                 if (!stringCurrentWeek)
                     stringCurrentWeek = document.querySelector('.small').innerText.split(' ').slice(3).join(' ')
                 let searchWeekNumber = weeksNumbers[stringCurrentWeek];
-                let searchDayNumber = currentDayNumber--;
+                let searchDayNumber = currentDayNumber - 1;
                 let closestLessons = [];
                 let nextOffset = daysOffset;
 
@@ -298,14 +298,17 @@
                 if (currentDayNumber === 0) {
                     searchWeekNumber = ++searchWeekNumber % 4;
                     searchDayNumber = 0;
+                    nextOffset++;
                 }
 
                 while (!closestLessons.length) {
                     searchDayNumber = ++searchDayNumber % 7;
+                    console.log(searchDayNumber);
                     nextOffset++;
                     if (searchDayNumber === 0) {
                         searchWeekNumber = ++searchWeekNumber % 4;
                         searchDayNumber = 1;
+                        nextOffset++;
                     }
 
                     closestLessons = schedule.filter(lesson =>
@@ -320,7 +323,7 @@
                 })
 
                 date = new Date();
-                date.setDate(date.getDate() + nextOffset);
+                date.setDate(date.getDate() + nextOffset - 1);
                 const stringDate = date.toLocaleDateString('ru', {
                     weekday: 'long',
                     day: '2-digit',
