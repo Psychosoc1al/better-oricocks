@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.11
+// @version      3.0
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -409,7 +409,6 @@
                         day.lessons = collapsedLessons;
                 }
 
-                console.log(closestDays);
                 return closestDays;
             }
 
