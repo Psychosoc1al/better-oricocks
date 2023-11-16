@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      2.5.10
+// @version      2.5.11
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -372,11 +372,59 @@
             }
 
 
+            /**
+             * Collapses multiplied lessons with the same name into one
+             *
+             * @param closestDays - The list of closest days with lessons (see {@link getClosestLessons()})
+             * @return {Object[]} The list of closest days with refactored lessons
+             */
+            const collapseDuplicatedLessons = function (closestDays) {
+                for (const day of closestDays) {
+                    const collapsedLessons = [];
+                    let currentLesson;
+                    let currentLessonNumber = 0;
+                    let lessonCount = 1;
+
+                    for (let i = 0; i < day.lessons.length; i++)
+                        if (day.lessons[i].name === day.lessons[i + 1]?.name)
+                            lessonCount++;
+                        else {
+                            if (lessonCount > 1) {
+                                currentLesson = day.lessons[currentLessonNumber];
+                                let name = currentLesson.name;
+                                let amountPart = `(${lessonCount} пар${lessonCount < 5 ? 'ы' : ''})`;
+                                name.indexOf('[') !== -1 ?
+                                    name = name.replace('[', amountPart + ' [') :
+                                    name += amountPart;
+
+                                currentLesson.name = name;
+                                collapsedLessons.push(currentLesson);
+                            } else
+                                collapsedLessons.push(day.lessons[currentLessonNumber]);
+
+                            currentLessonNumber += lessonCount;
+                            lessonCount = 1;
+                        }
+
+                        day.lessons = collapsedLessons;
+                }
+
+                console.log(closestDays);
+                return closestDays;
+            }
+
+
+            /**
+             * Sets the schedule based on the closest lessons
+             *
+             * @param closestDays - The list of closest days with lessons (see {@link getClosestLessons()})
+             */
             const setSchedule = function (closestDays) {
                 const source = document.querySelector('#forang');
                 const jsonData = JSON.parse(source.textContent);
                 const schedule = [];
 
+                closestDays = collapseDuplicatedLessons(closestDays);
                 for (let i = 0; i < closestDays.length; i++) {
                     schedule[i] = [];
                     schedule[i][0] = closestDays[i].date;
@@ -389,19 +437,18 @@
                         if (lessonTypeMatch) {
                             lessonName = lesson.name.match(/(.*) \[?/)[1];
                             lessonType = lessonTypeMatch[1];
-                        }
-                        else {
+                        } else {
                             lessonName = lesson.name;
                             lessonType = '';
                         }
 
                         schedule[i][1].push({
                             'name': `${lessonName}
-                            ${lesson.teacher}
+                            ► ${lesson.teacher}
                             `,
                             'type': lessonType,
                             'location': lesson.room,
-                            'time': lesson.startTime
+                            'time': lesson.startTime === '12:00' ? '12:00/30' : lesson.startTime
                         });
                     }
                 }
