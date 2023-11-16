@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.1
+// @version      3.0.2
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -10,7 +10,6 @@
 // @icon         https://orioks.miet.ru/favicon.ico
 // @run-at       document-body
 // @connect      miet.ru
-// @connect      worldtimeapi.org
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
