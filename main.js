@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0
+// @version      3.0.1
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -393,8 +393,10 @@
                                 currentLesson = day.lessons[currentLessonNumber];
                                 let name = currentLesson.name;
                                 let amountPart = `(${lessonCount} пар${lessonCount < 5 ? 'ы' : ''})`;
-                                name.indexOf('[') !== -1 ?
-                                    name = name.replace('[', amountPart + ' [') :
+
+                                if (name.indexOf('[') !== -1)
+                                    name = name.replace('[', amountPart + ' [')
+                                else
                                     name += amountPart;
 
                                 currentLesson.name = name;
@@ -406,7 +408,7 @@
                             lessonCount = 1;
                         }
 
-                        day.lessons = collapsedLessons;
+                    day.lessons = collapsedLessons;
                 }
 
                 return closestDays;
