@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.8
+// @version      3.0.9
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -586,14 +586,14 @@
             }
 
             for (const element of orioksSheet.cssRules) {
-                if (element.cssText.startsWith("body")) {
+                if (element.selectorText === "body") {
                     element.style.backgroundColor = "#181a1b";
                     element.style.color = "#b6b0a6";
                 }
             }
 
             for (const element of studentSheet.cssRules) {
-                if (element.cssText.includes(".grade_")) {
+                if (element.selectorText?.startsWith(".grade_")) {
                     const coeffMatch = element.cssText.match(/\d+/);
                     if (coeffMatch) {
                         const coeff = parseInt(coeffMatch[0]);
@@ -636,88 +636,115 @@
         };
 
         const setDarkMode = function () {
-            for (const sheet of document.styleSheets) {
+            const sheets = Array.from(document.styleSheets);
+            const bootstrapSheet = sheets.find((sheet) =>
+                sheet.href?.includes(
+                    "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
+                ),
+            );
+            const orioksSheet = sheets.find((sheet) =>
+                sheet.href?.includes(
+                    "https://orioks.miet.ru/controller/orioks.css",
+                ),
+            );
+            const indexSheet = sheets.find((sheet) =>
+                sheet.href?.includes(
+                    "https://orioks.miet.ru/controller/faq/index.css",
+                ),
+            );
+
+            for (const element of bootstrapSheet.cssRules) {
                 if (
-                    sheet.href?.includes(
-                        "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
+                    [".well", ".breadcrumb"].some(
+                        (elem) => element.selectorText === elem,
                     )
                 ) {
-                    for (const element of sheet.cssRules) {
-                        if (
-                            [".well", ".breadcrumb"].some(
-                                (elem) => element.selectorText === elem,
-                            )
-                        ) {
-                            element.style.backgroundColor = "#1b1d1e";
-                            element.style.borderColor = "#363b3d";
-                        } else if (
-                            element.selectorText === ".breadcrumb > .active"
-                        )
-                            element.style.color = changeColorBrightness(
-                                element.style.color,
-                                70,
-                            );
-                        else if (element.selectorText === ".table") {
-                            console.log(element);
-                            element.style.backgroundColor = "#181a1b";
-
-                            if (element.cssText.includes("tr:hover"))
-                                element.style.backgroundColor = "#1e2021";
-
-                            if (element.style.border)
-                                element.style.border = "1px solid #545b5e";
-                        } else if (
-                            [".label", ".navbar"].some((elem) =>
-                                element.cssText.startsWith(elem),
-                            ) &&
-                            element.style
-                        )
-                            element.style.backgroundColor =
-                                changeColorBrightness(
-                                    element.style.backgroundColor,
-                                    -40,
-                                );
-                        else if (
-                            element.cssText.startsWith("a") &&
-                            element.style.color
-                        )
-                            element.style.color = changeColorBrightness(
-                                element.style.color,
-                                60,
-                            );
-                        else if (
-                            ["li.active > a", "li > a:hover"].some(
-                                (elem) =>
-                                    element.cssText.includes(elem) &&
-                                    element.style,
-                            )
-                        )
-                            element.style.backgroundColor = "#181a1b";
-                    }
-                } else if (
-                    sheet.href?.includes(
-                        "https://orioks.miet.ru/controller/orioks.css",
+                    element.style.backgroundColor = "#1b1d1e";
+                    element.style.borderColor = "#363b3d";
+                } else if (element.selectorText === ".breadcrumb > .active")
+                    element.style.color = changeColorBrightness(
+                        element.style.color,
+                        70,
+                    );
+                else if (element.selectorText === ".table")
+                    element.style.backgroundColor = "#181a1b";
+                else if (
+                    element.selectorText?.includes(
+                        ".table-bordered > tbody > tr > td",
                     )
-                ) {
-                    for (const element of sheet.cssRules) {
-                        if (element.cssText.startsWith("body")) {
-                            element.style.backgroundColor = "#181a1b";
-                            element.style.color = "#b6b0a6";
-                        }
-                    }
+                )
+                    element.style.border = "1px solid #545b5e";
+                else if (
+                    [".label", ".navbar"].some((elem) =>
+                        element.cssText.startsWith(elem),
+                    ) &&
+                    element.style
+                )
+                    element.style.backgroundColor = changeColorBrightness(
+                        element.style.backgroundColor,
+                        -40,
+                    );
+                else if (
+                    ["li.active > a", "li > a:hover"].some(
+                        (elem) =>
+                            element.cssText.includes(elem) && element.style,
+                    )
+                )
+                    element.style.backgroundColor = "#181a1b";
+                else if (element.selectorText?.startsWith("a"))
+                    element.style.color = changeColorBrightness(
+                        element.style.color,
+                        60,
+                    );
+                else if (element.selectorText === ".panel")
+                    element.style.backgroundColor = "#1b1d1e";
+                else if (
+                    element.selectorText === ".panel-default > .panel-heading"
+                )
+                    element.style.backgroundColor = changeColorBrightness(
+                        "#1b1d1e",
+                        40,
+                    );
+                else if (element.selectorText === ".panel-default")
+                    element.style.borderColor = "#363b3d";
+                else if (element.selectorText?.startsWith(".panel-title > a"))
+                    element.style.color = "#3cc8f6";
+                else if (element.selectorText?.startsWith("select")) {
+                    element.style.backgroundColor = "#1b1d1e";
+                    element.style.borderColor = "#3e4446";
+                    element.style.color = "#a29a8e";
                 }
-
-                const toTopButton = document.querySelector("#to_top");
-                toTopButton.addEventListener("mouseover", () => {
-                    toTopButton.style.backgroundColor = "#26292a";
-                });
-
-                toTopButton.addEventListener("mouseout", () => {
-                    toTopButton.style.backgroundColor = "";
-                });
             }
+
+            for (const element of orioksSheet.cssRules) {
+                if (element.selectorText === "body") {
+                    element.style.backgroundColor = "#181a1b";
+                    element.style.color = "#b6b0a6";
+                }
+            }
+
+            if (indexSheet) indexSheet.cssRules[0]["style"].color = "#3cc8f6";
+
+            const toTopButton = document.querySelector("#to_top");
+            toTopButton.addEventListener("mouseover", () => {
+                toTopButton.style.backgroundColor = "#26292a";
+            });
+
+            toTopButton.addEventListener("mouseout", () => {
+                toTopButton.style.backgroundColor = "";
+            });
         };
 
         onPageOpen();
     }
+
+    // CSS reload
+    // document.querySelectorAll("link[rel=stylesheet]").forEach((link) => {
+    //     if (
+    //         ["bootstrap.min.css", "orioks.css", "student.css"].some((elem) =>
+    //             link.href.includes(elem),
+    //         )
+    //     )
+    //         link.href = link.href.replace(/\?.*|$/, "?" + Date.now());
+    // });
 })();
