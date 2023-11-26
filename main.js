@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.10
+// @version      3.0.11
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -607,11 +607,15 @@
                 if (element.selectorText === "body") {
                     element.style.backgroundColor = "#181a1b";
                     element.style.color = "#b6b0a6";
-                } else if (element.selectorText?.startsWith(".notification")) {
-                    console.log(element);
+                } else if (element.selectorText?.startsWith(".notifications")) {
                     element.style.background = changeColorBrightness(
                         element.style.background,
                         -180,
+                    );
+                } else if (element.selectorText?.startsWith(".notification")) {
+                    element.style.background = changeColorBrightness(
+                        element.style.background,
+                        -200,
                     );
                 }
             }
@@ -676,6 +680,16 @@
                     "https://orioks.miet.ru/controller/faq/index.css",
                 ),
             );
+            const filePickerSheet = sheets.find((sheet) =>
+                sheet.href?.includes(
+                    "https://orioks.miet.ru/widgets/filePicker.css",
+                ),
+            );
+            const commentSheet = sheets.find((sheet) =>
+                sheet.href?.includes(
+                    "https://orioks.miet.ru/controller/comment.css",
+                ),
+            );
 
             for (const element of bootstrapSheet.cssRules) {
                 if (
@@ -693,12 +707,14 @@
                 else if (element.selectorText === ".table")
                     element.style.backgroundColor = "#181a1b";
                 else if (
-                    element.selectorText?.includes(
+                    [
+                        ".table > tbody > tr.active > td",
                         ".table-bordered > tbody > tr > td",
-                    )
-                )
+                    ].some((elem) => element.selectorText?.includes(elem))
+                ) {
                     element.style.border = "1px solid #545b5e";
-                else if (
+                    element.style.backgroundColor = "#181a1b";
+                } else if (
                     [".label", ".navbar"].some((elem) =>
                         element.cssText.startsWith(elem),
                     ) &&
@@ -715,12 +731,22 @@
                     )
                 )
                     element.style.backgroundColor = "#181a1b";
-                else if (element.selectorText?.startsWith("a"))
+                else if (element.selectorText?.startsWith("a")) {
                     element.style.color = changeColorBrightness(
                         element.style.color,
                         60,
                     );
-                else if (element.selectorText === ".panel")
+
+                    if (
+                        element.selectorText.startsWith(
+                            "a.list-group-item:hover",
+                        )
+                    )
+                        element.style.backgroundColor = changeColorBrightness(
+                            element.style.backgroundColor,
+                            -200,
+                        );
+                } else if (element.selectorText === ".panel")
                     element.style.backgroundColor = "#1b1d1e";
                 else if (
                     element.selectorText === ".panel-default > .panel-heading"
@@ -737,6 +763,9 @@
                     element.style.backgroundColor = "#1b1d1e";
                     element.style.borderColor = "#3e4446";
                     element.style.color = "#a29a8e";
+                } else if (element.selectorText === ".list-group-item") {
+                    element.style.backgroundColor = "#181a1b";
+                    element.style.borderColor = "#545b5e";
                 }
             }
 
@@ -744,10 +773,59 @@
                 if (element.selectorText === "body") {
                     element.style.backgroundColor = "#181a1b";
                     element.style.color = "#b6b0a6";
+                } else if (element.selectorText?.startsWith(".notifications")) {
+                    element.style.background = changeColorBrightness(
+                        element.style.background,
+                        -180,
+                    );
+                } else if (element.selectorText?.startsWith(".notification")) {
+                    element.style.background = changeColorBrightness(
+                        element.style.background,
+                        -200,
+                    );
                 }
             }
 
             if (indexSheet) indexSheet.cssRules[0]["style"].color = "#3cc8f6";
+
+            if (filePickerSheet)
+                for (const element of filePickerSheet.cssRules) {
+                    if (
+                        [".resumable-drop", ".dragover"].some(
+                            (elem) => element.selectorText === elem,
+                        )
+                    ) {
+                        element.style.backgroundColor = "#181a1b";
+                        element.style.borderColor = "#545b5e";
+                    }
+                }
+
+            if (commentSheet)
+                for (const element of commentSheet.cssRules) {
+                    if (element.selectorText === ".media-body .author")
+                        element.style.color = changeColorBrightness(
+                            element.style.color,
+                            200,
+                        );
+                    else if (element.selectorText === ".media-left .avatar")
+                        element.style.color = changeColorBrightness(
+                            element.style.color,
+                            -30,
+                        );
+                }
+
+            const markUnreadButton = document.querySelector("a.avatar");
+            if (markUnreadButton)
+                markUnreadButton.style.background = "transparent";
+
+            const commentsAvatars = document.querySelectorAll("div.avatar");
+            commentsAvatars.forEach(
+                (avatar) =>
+                    (avatar.style.backgroundColor = changeColorBrightness(
+                        avatar.style.backgroundColor,
+                        -50,
+                    )),
+            );
 
             const toTopButton = document.querySelector("#to_top");
             toTopButton.addEventListener("mouseover", () => {
