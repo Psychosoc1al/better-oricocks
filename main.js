@@ -66,18 +66,17 @@
      * @param {number} amount - The amount by which to darken the color.
      * @return {string} The darker version of the RGB color.
      */
-    const makeDarker = function (rgbColor, amount) {
-        let result = "rgb(#, #, #)";
+    const changeColorBrightness = function (rgbColor, amount) {
+        if (!rgbColor.match(/\d+/g)) return "";
 
-        if (!rgbColor || rgbColor === "none" || rgbColor === "transparent")
-            return "";
+        let result = "rgb(#, #, #)";
 
         rgbColor
             .split(")")[0]
             .match(/\d+/g)
             .forEach((color) => {
-                color = parseInt(color) - amount;
-                color = Math.max(0, color);
+                color = parseInt(color) + amount;
+                color = Math.min(Math.max(0, color), 255);
 
                 result = result.replace("#", color.toString());
             });
@@ -554,7 +553,7 @@
                                 element.style.backgroundColor = "#1e2021";
 
                             if (element.style.border)
-                                element.style.borderTop = "1px solid #545b5e";
+                                element.style.border = "1px solid #545b5e";
                             else if (element.style.borderTopColor)
                                 element.style.borderTopColor = "#545b5e";
                             else if (element.style.borderBottom)
@@ -566,9 +565,18 @@
                             ) &&
                             element.style
                         )
-                            element.style.backgroundColor = makeDarker(
-                                element.style.backgroundColor,
-                                40,
+                            element.style.backgroundColor =
+                                changeColorBrightness(
+                                    element.style.backgroundColor,
+                                    -40,
+                                );
+                        else if (
+                            element.cssText.startsWith("a") &&
+                            element.style.color
+                        )
+                            element.style.color = changeColorBrightness(
+                                element.style.color,
+                                60,
                             );
                     }
                 } else if (
@@ -592,18 +600,15 @@
                             const coeffMatch = element.cssText.match(/\d+/);
                             if (coeffMatch) {
                                 const coeff = parseInt(coeffMatch[0]);
-                                element.style.background = makeDarker(
-                                    element.style.background,
-                                    (8 - coeff) * 10,
-                                );
+                                element.style.background =
+                                    changeColorBrightness(
+                                        element.style.background,
+                                        (coeff - 8) * 10,
+                                    );
                             }
                         }
                     }
                 }
-
-                document
-                    .querySelectorAll("div.container.margin-top a")
-                    .forEach((elem) => (elem.style.color = "#4ad2ff"));
 
                 const toTopButton = document.querySelector("#to_top");
                 toTopButton.addEventListener("mouseover", () => {
@@ -613,9 +618,6 @@
                 toTopButton.addEventListener("mouseout", () => {
                     toTopButton.style.backgroundColor = "";
                 });
-
-                const newsButton = document.querySelector('a[href="#news"]');
-                if (newsButton) newsButton.style.color = "#181a1b";
             }
         };
 
@@ -633,5 +635,83 @@
         };
 
         onPageOpen();
-    } else if (document.URL.includes("orioks.miet.ru")) changeBodyWidth();
+    } else if (document.URL.includes("orioks.miet.ru")) {
+        const onPageOpen = function () {
+            changeBodyWidth();
+            setDarkMode();
+        };
+
+        const setDarkMode = function () {
+            for (const sheet of document.styleSheets) {
+                if (
+                    sheet.href?.includes(
+                        "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
+                    )
+                ) {
+                    for (const element of sheet.cssRules) {
+                        if (
+                            element.cssText.startsWith(".table") &&
+                            element.style
+                        ) {
+                            element.style.backgroundColor = "#181a1b";
+
+                            if (element.cssText.includes("tr:hover"))
+                                element.style.backgroundColor = "#1e2021";
+
+                            if (element.style.border)
+                                element.style.border = "1px solid #545b5e";
+                        } else if (
+                            [".label", ".navbar"].some((elem) =>
+                                element.cssText.startsWith(elem),
+                            ) &&
+                            element.style
+                        )
+                            element.style.backgroundColor =
+                                changeColorBrightness(
+                                    element.style.backgroundColor,
+                                    -40,
+                                );
+                        else if (
+                            element.cssText.startsWith("a") &&
+                            element.style.color
+                        )
+                            element.style.color = changeColorBrightness(
+                                element.style.color,
+                                60,
+                            );
+                        else if (
+                            ["li.active > a", "li > a:hover"].some(
+                                (elem) =>
+                                    element.cssText.includes(elem) &&
+                                    element.style,
+                            )
+                        )
+                            element.style.backgroundColor = "#181a1b";
+                    }
+                } else if (
+                    sheet.href?.includes(
+                        "https://orioks.miet.ru/controller/orioks.css",
+                    )
+                ) {
+                    for (const element of sheet.cssRules) {
+                        if (element.cssText.startsWith("body")) {
+                            element.style.backgroundColor = "#181a1b";
+                            element.style.color = "#b6b0a6";
+                        }
+                    }
+                }
+
+                const toTopButton = document.querySelector("#to_top");
+                toTopButton.addEventListener("mouseover", () => {
+                    toTopButton.style.backgroundColor = "#26292a";
+                });
+
+                toTopButton.addEventListener("mouseout", () => {
+                    toTopButton.style.backgroundColor = "";
+                });
+            }
+        };
+
+        onPageOpen();
+    }
 })();
