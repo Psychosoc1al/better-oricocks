@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.5
+// @version      3.0.6
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -57,6 +57,32 @@
     const loadValueByKey = function (key) {
         // noinspection JSUnresolvedReference,JSCheckFunctionSignatures
         return GM.getValue(key);
+    };
+
+    /**
+     * Generates a darker version of an RGB color by reducing the brightness.
+     *
+     * @param {string} rgbColor - The RGB color to make darker.
+     * @param {number} amount - The amount by which to darken the color.
+     * @return {string} The darker version of the RGB color.
+     */
+    const makeDarker = function (rgbColor, amount) {
+        let result = "rgb(#, #, #)";
+
+        if (!rgbColor || rgbColor === "none" || rgbColor === "transparent")
+            return "";
+
+        rgbColor
+            .split(")")[0]
+            .match(/\d+/g)
+            .forEach((color) => {
+                color = parseInt(color) - amount;
+                color = Math.max(0, color);
+
+                result = result.replace("#", color.toString());
+            });
+
+        return result;
     };
 
     // check to know if we are on the page with grades
@@ -494,6 +520,105 @@
             source.textContent = JSON.stringify(jsonData);
         };
 
+        const setDarkMode = function () {
+            for (const sheet of document.styleSheets) {
+                if (
+                    sheet.href?.includes(
+                        "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
+                    )
+                ) {
+                    for (const element of sheet.cssRules) {
+                        if (
+                            [".well", ".breadcrumb"].some((elem) =>
+                                element.cssText.startsWith(elem),
+                            )
+                        ) {
+                            element.style.backgroundColor = "#1b1d1e";
+                            element.style.borderColor = "#363b3d";
+                        } else if (
+                            element.cssText.startsWith(".label-default")
+                        ) {
+                            element.style.backgroundColor = "#26292a";
+                            element.style.color = "#aec2d3";
+                        } else if (element.cssText.startsWith("select")) {
+                            element.style.backgroundColor = "#1b1d1e";
+                            element.style.borderColor = "#3e4446";
+                            element.style.color = "#a29a8e";
+                        } else if (
+                            element.cssText.startsWith(".table") &&
+                            element.style
+                        ) {
+                            element.style.backgroundColor = "#181a1b";
+
+                            if (element.cssText.includes("tr:hover"))
+                                element.style.backgroundColor = "#1e2021";
+
+                            if (element.style.border)
+                                element.style.borderTop = "1px solid #545b5e";
+                            else if (element.style.borderTopColor)
+                                element.style.borderTopColor = "#545b5e";
+                            else if (element.style.borderBottom)
+                                element.style.borderBottom =
+                                    "2px solid #545b5e";
+                        } else if (
+                            [".label", ".navbar"].some((elem) =>
+                                element.cssText.startsWith(elem),
+                            ) &&
+                            element.style
+                        )
+                            element.style.backgroundColor = makeDarker(
+                                element.style.backgroundColor,
+                                40,
+                            );
+                    }
+                } else if (
+                    sheet.href?.includes(
+                        "https://orioks.miet.ru/controller/orioks.css",
+                    )
+                ) {
+                    for (const element of sheet.cssRules) {
+                        if (element.cssText.startsWith("body")) {
+                            element.style.backgroundColor = "#181a1b";
+                            element.style.color = "#b6b0a6";
+                        }
+                    }
+                } else if (
+                    sheet.href?.includes(
+                        "https://orioks.miet.ru/controller/student/student.css",
+                    )
+                ) {
+                    for (const element of sheet.cssRules) {
+                        if (element.cssText.includes(".grade_")) {
+                            const coeffMatch = element.cssText.match(/\d+/);
+                            if (coeffMatch) {
+                                const coeff = parseInt(coeffMatch[0]);
+                                element.style.background = makeDarker(
+                                    element.style.background,
+                                    (8 - coeff) * 10,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                document
+                    .querySelectorAll("div.container.margin-top a")
+                    .forEach((elem) => (elem.style.color = "#4ad2ff"));
+
+                const toTopButton = document.querySelector("#to_top");
+                toTopButton.addEventListener("mouseover", () => {
+                    toTopButton.style.backgroundColor = "#26292a";
+                });
+
+                toTopButton.addEventListener("mouseout", () => {
+                    toTopButton.style.backgroundColor = "";
+                });
+
+                const newsButton = document.querySelector('a[href="#news"]');
+                if (newsButton) newsButton.style.color = "#181a1b";
+            }
+        };
+
         /**
          * Executes the necessary actions when the page is opened.
          */
@@ -504,6 +629,7 @@
             changeGradeFieldsSizes();
             changeBodyWidth();
             setScheduleCSS();
+            setDarkMode();
         };
 
         onPageOpen();
