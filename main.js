@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.11
+// @version      3.0.12
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
-// @author       Antonchik
+// @author       Psychosoc1al
 // @license      MIT
 // @namespace    https://github.com/Psychosoc1al
 // @match        https://orioks.miet.ru/*
@@ -522,19 +522,16 @@
         const setDarkMode = function () {
             const sheets = Array.from(document.styleSheets);
             const bootstrapSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
-                ),
+                sheet.href?.includes("bootstrap.min.css"),
             );
             const orioksSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/controller/orioks.css",
-                ),
+                sheet.href?.includes("orioks.css"),
             );
             const studentSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/controller/student/student.css",
-                ),
+                sheet.href?.includes("student.css"),
+            );
+            const switchSheet = sheets.find((sheet) =>
+                sheet.href?.includes("bootstrap-switch.min.css"),
             );
 
             for (const element of bootstrapSheet.cssRules) {
@@ -601,6 +598,25 @@
                     element.style.border = "1px solid #545b5e";
                 } else if (element.selectorText === ".panel-default")
                     element.style.borderColor = "#545b5e";
+                else if (
+                    element.selectorText === ".panel-default > .panel-heading"
+                ) {
+                    element.style.color = changeColorBrightness(
+                        element.style.color,
+                        40,
+                    );
+                    element.style.backgroundColor = "#181a1b";
+                    element.style.borderColor = "#545b5e";
+                } else if (
+                    [".btn-success", ".btn-primary"].some(
+                        (elem) => element.selectorText === elem,
+                    )
+                )
+                    for (const style of element.style)
+                        element.style[style] = changeColorBrightness(
+                            element.style[style],
+                            -30,
+                        );
             }
 
             for (const element of orioksSheet.cssRules) {
@@ -632,6 +648,21 @@
                     }
                 }
             }
+
+            if (switchSheet)
+                for (const element of switchSheet.cssRules) {
+                    if (
+                        element.selectorText?.includes(
+                            ".bootstrap-switch .bootstrap-switch",
+                        )
+                    ) {
+                        console.log(element);
+                        element.style.background = changeColorBrightness(
+                            element.style.background,
+                            -100,
+                        );
+                    }
+                }
 
             const toTopButton = document.querySelector("#to_top");
             toTopButton.addEventListener("mouseover", () => {
@@ -666,29 +697,19 @@
         const setDarkMode = function () {
             const sheets = Array.from(document.styleSheets);
             const bootstrapSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/libs/bootstrap/bootstrap.min.css",
-                ),
+                sheet.href?.includes("bootstrap.min.css"),
             );
             const orioksSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/controller/orioks.css",
-                ),
+                sheet.href?.includes("orioks.css"),
             );
             const indexSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/controller/faq/index.css",
-                ),
+                sheet.href?.includes("index.css"),
             );
             const filePickerSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/widgets/filePicker.css",
-                ),
+                sheet.href?.includes("filePicker.css"),
             );
             const commentSheet = sheets.find((sheet) =>
-                sheet.href?.includes(
-                    "https://orioks.miet.ru/controller/comment.css",
-                ),
+                sheet.href?.includes("comment.css"),
             );
 
             for (const element of bootstrapSheet.cssRules) {
@@ -727,7 +748,8 @@
                 else if (
                     ["li.active > a", "li > a:hover"].some(
                         (elem) =>
-                            element.cssText.includes(elem) && element.style,
+                            element.selectorText?.includes(elem) &&
+                            element.style,
                     )
                 )
                     element.style.backgroundColor = "#181a1b";
@@ -766,7 +788,16 @@
                 } else if (element.selectorText === ".list-group-item") {
                     element.style.backgroundColor = "#181a1b";
                     element.style.borderColor = "#545b5e";
-                }
+                } else if (
+                    [".btn-success", ".btn-primary"].some(
+                        (elem) => element.selectorText === elem,
+                    )
+                )
+                    for (const style of element.style)
+                        element.style[style] = changeColorBrightness(
+                            element.style[style],
+                            -30,
+                        );
             }
 
             for (const element of orioksSheet.cssRules) {
