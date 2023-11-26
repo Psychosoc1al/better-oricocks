@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.9
+// @version      3.0.10
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -563,10 +563,19 @@
                 )
                     element.style.backgroundColor = "#1e2021";
                 else if (
-                    element.selectorText?.includes(".table > tbody > tr > td")
-                )
+                    [
+                        ".table > tbody > tr > td",
+                        ".table-hover > tbody > tr:hover > td",
+                        ".table-hover > tbody > tr.info:hover > td",
+                        ".table-hover > tbody > tr.success:hover > td",
+                    ].some((elem) => element.selectorText?.includes(elem))
+                ) {
                     element.style.borderTopColor = "#545b5e";
-                else if (element.selectorText === ".table > thead > tr > th")
+                    element.style.backgroundColor = changeColorBrightness(
+                        element.style.backgroundColor,
+                        -200,
+                    );
+                } else if (element.selectorText === ".table > thead > tr > th")
                     element.style.borderBottom = "2px solid #545b5e";
                 else if (
                     [".label", ".navbar"].some((elem) =>
@@ -583,12 +592,27 @@
                         element.style.color,
                         60,
                     );
+                else if (
+                    [".panel", ".list-group-item"].some(
+                        (elem) => element.selectorText === elem,
+                    )
+                ) {
+                    element.style.backgroundColor = "#1b1d1e";
+                    element.style.border = "1px solid #545b5e";
+                } else if (element.selectorText === ".panel-default")
+                    element.style.borderColor = "#545b5e";
             }
 
             for (const element of orioksSheet.cssRules) {
                 if (element.selectorText === "body") {
                     element.style.backgroundColor = "#181a1b";
                     element.style.color = "#b6b0a6";
+                } else if (element.selectorText?.startsWith(".notification")) {
+                    console.log(element);
+                    element.style.background = changeColorBrightness(
+                        element.style.background,
+                        -180,
+                    );
                 }
             }
 
