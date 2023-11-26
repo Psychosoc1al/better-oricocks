@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.5
+// @version      3.0.6
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -281,17 +281,26 @@
          *
          * @param {Object} schedule - The whole schedule object
          * @param {number} daysOffset - The offset in days from the current day to start search
+         * @param {boolean} weekChanged - Whether the week has changed while searching the closest day
          * @return {Object[]} The closest two days lessons list
          */
-        const getClosestLessons = function (schedule, daysOffset = 0) {
+        const getClosestLessons = function (
+            schedule,
+            daysOffset = 0,
+            weekChanged = false,
+        ) {
             let currentTime, currentDayNumber;
             let date = new Date();
+            let utcDate = new Date(
+                date.getTime() + date.getTimezoneOffset() * 60 * 1000,
+            );
+            date = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
 
             if (daysOffset === 0) {
                 currentTime = date.toLocaleTimeString("ru", {
-                    timeZone: "Europe/Moscow",
                     hour: "2-digit",
                     minute: "2-digit",
+                    hour12: false,
                 });
                 currentDayNumber = date.getDay();
             } else {
@@ -321,7 +330,8 @@
                 searchWeekNumber = ++searchWeekNumber % 4;
                 searchDayNumber = 0;
                 nextOffset++;
-            }
+                weekChanged = true;
+            } else if (weekChanged) searchWeekNumber = ++searchWeekNumber % 4;
 
             while (!closestLessons.length) {
                 searchDayNumber = ++searchDayNumber % 7;
@@ -361,7 +371,7 @@
                         date: stringDate,
                         lessons: closestLessons,
                     },
-                ].concat(getClosestLessons(schedule, nextOffset));
+                ].concat(getClosestLessons(schedule, nextOffset, weekChanged));
             return [
                 {
                     date: stringDate,
