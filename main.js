@@ -656,7 +656,6 @@
                             ".bootstrap-switch .bootstrap-switch",
                         )
                     ) {
-                        console.log(element);
                         element.style.background = changeColorBrightness(
                             element.style.background,
                             -100,
@@ -710,6 +709,9 @@
             );
             const commentSheet = sheets.find((sheet) =>
                 sheet.href?.includes("comment.css"),
+            );
+            const switchSheet = sheets.find((sheet) =>
+                sheet.href?.includes("bootstrap-switch.min.css"),
             );
 
             for (const element of bootstrapSheet.cssRules) {
@@ -789,7 +791,7 @@
                     element.style.backgroundColor = "#181a1b";
                     element.style.borderColor = "#545b5e";
                 } else if (
-                    [".btn-success", ".btn-primary"].some(
+                    [".btn-success", ".btn-primary", ".btn-danger"].some(
                         (elem) => element.selectorText === elem,
                     )
                 )
@@ -798,6 +800,21 @@
                             element.style[style],
                             -30,
                         );
+                else if (
+                    element.selectorText === ".table .table" ||
+                    element.selectorText?.startsWith(
+                        ".table-striped > tbody > tr:nth-child",
+                    )
+                )
+                    element.style.backgroundColor = "#1b1d1e";
+                else if (element.selectorText?.startsWith("button, ")) {
+                    element.style.backgroundColor = changeColorBrightness(
+                        element.style.backgroundColor,
+                        -80,
+                    );
+                    element.style.borderColor = "#545b5e";
+                } else if (element.selectorText === ".table > thead > tr > th")
+                    element.style.borderBottom = "2px solid #545b5e";
             }
 
             for (const element of orioksSheet.cssRules) {
@@ -843,6 +860,20 @@
                             element.style.color,
                             -30,
                         );
+                }
+
+            if (switchSheet)
+                for (const element of switchSheet.cssRules) {
+                    if (
+                        element.selectorText?.includes(
+                            ".bootstrap-switch .bootstrap-switch",
+                        )
+                    ) {
+                        element.style.background = changeColorBrightness(
+                            element.style.background,
+                            -100,
+                        );
+                    }
                 }
 
             const markUnreadButton = document.querySelector("a.avatar");
