@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.12
+// @version      3.0.13
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Psychosoc1al
@@ -713,6 +713,9 @@
             const switchSheet = sheets.find((sheet) =>
                 sheet.href?.includes("bootstrap-switch.min.css"),
             );
+            const jquerySheet = sheets.find((sheet) =>
+                sheet.href?.includes("jquery-ui.min.css"),
+            );
 
             for (const element of bootstrapSheet.cssRules) {
                 if (
@@ -888,6 +891,44 @@
                         -50,
                     )),
             );
+
+            const dateInput = document.querySelector(
+                "#portprojectfilter-file_date",
+            );
+            if (dateInput) {
+                const interval = setInterval(() => {
+                    if (document.querySelector("#ui-datepicker-div")) {
+                        clearInterval(interval);
+                        for (const element of jquerySheet.cssRules)
+                            if (
+                                [
+                                    ".ui-widget-content",
+                                    ".ui-widget-header",
+                                ].some((elem) => element.selectorText === elem)
+                            ) {
+                                element.style.color = "#b6b0a6";
+                                element.style.background = "#1b1d1e";
+                                element.style.border = "1px solid #545b5e";
+                            } else if (
+                                element.selectorText?.startsWith(".ui-state-")
+                            ) {
+                                element.style.background =
+                                    changeColorBrightness(
+                                        element.style.background,
+                                        -200,
+                                    );
+                                element.style.color = "#b6b0a6";
+                                if (element.selectorText.includes("-highlight"))
+                                    element.style.color = changeColorBrightness(
+                                        element.style.color,
+                                        -170,
+                                    );
+                                if (!element.selectorText.includes("-disabled"))
+                                    element.style.border = "1px solid #545b5e";
+                            }
+                    }
+                }, 100);
+            }
 
             const toTopButton = document.querySelector("#to_top");
             toTopButton.addEventListener("mouseover", () => {
