@@ -633,6 +633,10 @@
                         element.style.background,
                         -200,
                     );
+                    element.style.color = changeColorBrightness(
+                        element.style.color,
+                        60,
+                    );
                 }
             }
 
