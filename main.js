@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.14
+// @version      3.0.15
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Psychosoc1al
@@ -627,6 +627,8 @@
                             element.style[style],
                             -30,
                         );
+                else if (element.selectorText === ".modal-content")
+                    element.style.backgroundColor = "#1b1d1e";
             }
 
             for (const element of orioksSheet.cssRules) {
