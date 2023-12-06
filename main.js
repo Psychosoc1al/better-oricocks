@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.15
+// @version      3.0.16
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Psychosoc1al
@@ -177,9 +177,7 @@
                     for (const element of sheet.cssRules) {
                         if (element.selectorText === ".w46")
                             element.style.width = "34px";
-                        if (
-                            [".grade", "#bp"].includes(element["selectorText"])
-                        ) {
+                        if ([".grade", "#bp"].includes(element.selectorText)) {
                             element.style.width = "45px";
                             element.style.padding = "3px";
                         }
@@ -687,6 +685,24 @@
             toTopButton.addEventListener("mouseout", () => {
                 toTopButton.style.backgroundColor = "";
             });
+
+            setInterval(() => {
+                const rightSideLinks = document.querySelectorAll(
+                    "div.list-group-item a.ng-binding",
+                );
+
+                for (const link of rightSideLinks)
+                    link.addEventListener("click", () =>
+                        setTimeout(() => {
+                            const explicitDarkText = document.querySelectorAll(
+                                'div[style="color:rgb(79,79,79);"]',
+                            );
+                            console.log(explicitDarkText);
+                            for (const element of explicitDarkText)
+                                element.style.color = "#b6b0a6";
+                        }, 300),
+                    );
+            }, 300);
         };
 
         /**
@@ -757,8 +773,8 @@
                     element.style.border = "1px solid #545b5e";
                     element.style.backgroundColor = "#181a1b";
                 } else if (
-                    [".label", ".navbar"].some((elem) =>
-                        element.cssText.startsWith(elem),
+                    [".label-info", ".label-danger", ".navbar"].some((elem) =>
+                        element.selectorText?.startsWith(elem),
                     ) &&
                     element.style
                 )
@@ -766,7 +782,16 @@
                         element.style.backgroundColor,
                         -40,
                     );
-                else if (
+                else if (element.selectorText?.includes(".label-default")) {
+                    element.style.backgroundColor = changeColorBrightness(
+                        element.style.backgroundColor,
+                        -130,
+                    );
+                    element.style.color = changeColorBrightness(
+                        element.style.color,
+                        160,
+                    );
+                } else if (
                     ["li.active > a", "li > a:hover"].some(
                         (elem) =>
                             element.selectorText?.includes(elem) &&
@@ -850,7 +875,8 @@
                         element.style.background,
                         -200,
                     );
-                }
+                } else if (element.selectorText === ".bg-grey")
+                    element.style.backgroundColor = "#1b1d1e";
             }
 
             if (indexSheet) indexSheet.cssRules[0]["style"].color = "#3cc8f6";
@@ -954,6 +980,28 @@
             toTopButton.addEventListener("mouseout", () => {
                 toTopButton.style.backgroundColor = "";
             });
+
+            const explicitDarkText = document.querySelectorAll(
+                'div[style="color:rgb(79,79,79);"]',
+            );
+            for (const element of explicitDarkText)
+                element.style.color = "#b6b0a6";
+
+            const inlineStyleTags = document.querySelectorAll("style");
+            if (inlineStyleTags)
+                inlineStyleTags.forEach((style) => {
+                    for (const cssRule of style.sheet.cssRules) {
+                        if (
+                            cssRule.selectorText ===
+                            ".list-group .panel-collapse > div:hover"
+                        )
+                            cssRule.style.backgroundColor =
+                                changeColorBrightness(
+                                    cssRule.style.backgroundColor,
+                                    -210,
+                                );
+                    }
+                });
         };
 
         onPageOpen();
