@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.16
+// @version      3.0.17
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Psychosoc1al
@@ -363,6 +363,7 @@
                     searchWeekNumber = ++searchWeekNumber % 4;
                     searchDayNumber = 1;
                     nextOffset++;
+                    weekChanged = true;
                 }
 
                 closestLessons = schedule.filter(
