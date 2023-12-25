@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Better OriCOCKs
-// @version      3.0.7
+// @version      3.0.8
 // @description  Изменение подсчёта баллов и местами дизайна, а также добавление/доработка расписания
 // @source       https://github.com/Psychosoc1al/better-oricocks
 // @author       Antonchik
@@ -133,10 +133,10 @@
                 if (gradeRatio < 0.2) return ["Не зачтено", 1];
                 return ["Не зачтено", 2];
             } else if (gradeRatio < 0.7)
-                return [isCredit ? "Зачтено" : "Удовлетворительно", 3];
+                return isCredit ? ["Зачтено", 5] : ["Удовлетворительно", 3];
             else if (gradeRatio < 0.86)
-                return [isCredit ? "Зачтено" : "Хорошо", 4];
-            else return [isCredit ? "Зачтено" : "Отлично", 5];
+                return isCredit ? ["Зачтено", 5] : ["Хорошо", 4];
+            else return isCredit ? ["Зачтено", 5] : ["Отлично", 5];
         };
 
         /**
